@@ -3,6 +3,7 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import cookieParser from 'cookie-parser';
 import { AppModule } from '../src/app/app.module';
+import { TestModule } from '../src/test/test.module';
 import { PrismaService } from '../src/prisma';
 
 export interface TestUser {
@@ -17,7 +18,7 @@ let userCounter = 0;
 
 export async function createTestApp(): Promise<INestApplication> {
   const moduleFixture: TestingModule = await Test.createTestingModule({
-    imports: [AppModule],
+    imports: [AppModule, TestModule],
   }).compile();
 
   const app = moduleFixture.createNestApplication();
