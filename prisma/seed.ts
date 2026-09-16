@@ -161,6 +161,43 @@ async function main() {
     });
   }
 
+  // ============================================================
+  // Breed — raças comuns associadas às espécies do seed
+  // ============================================================
+
+  console.log("Seeding breeds...");
+
+  const breedData: Record<string, string[]> = {
+    Cão: ["Labrador Retriever", "Poodle", "Bulldog Francês", "Pastor Alemão", "Golden Retriever"],
+    Gato: ["Siamês", "Persa", "Maine Coon", "Ragdoll", "Bengal"],
+    Coelho: ["Angorá", "Holandês"],
+    Cavalo: ["Árabe", "Mangalarga Marchador"],
+  };
+
+  for (const [speciesName, breedNames] of Object.entries(breedData)) {
+    const species = await prisma.species.findUnique({
+      where: { name: speciesName },
+    });
+
+    if (!species) continue;
+
+    for (const breedName of breedNames) {
+      await prisma.breed.upsert({
+        where: {
+          speciesId_name: {
+            speciesId: species.id,
+            name: breedName,
+          },
+        },
+        update: {},
+        create: {
+          speciesId: species.id,
+          name: breedName,
+        },
+      });
+    }
+  }
+
   console.log("Seed completed.");
 }
 
