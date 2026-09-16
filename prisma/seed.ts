@@ -130,8 +130,36 @@ async function main() {
   }
 
   // Specialty: nenhuma definida como seed inicial na documentação
-  // Species/Breed: dinâmicos, sem seed inicial definido
   // Allergy/Medication/Vaccine: sem dados iniciais definidos
+
+  // ============================================================
+  // Species — espécies comuns em clínica veterinária
+  // ============================================================
+
+  console.log("Seeding species...");
+  const SPECIES = [
+    { name: "Cão", scientificName: "Canis lupus familiaris" },
+    { name: "Gato", scientificName: "Felis catus" },
+    { name: "Ave", scientificName: null },
+    { name: "Coelho", scientificName: "Oryctolagus cuniculus" },
+    { name: "Hamster", scientificName: "Mesocricetus auratus" },
+    { name: "Tartaruga", scientificName: null },
+    { name: "Peixe", scientificName: null },
+    { name: "Furão", scientificName: "Mustela putorius furo" },
+    { name: "Porquinho-da-Índia", scientificName: "Cavia porcellus" },
+    { name: "Cavalo", scientificName: "Equus caballus" },
+  ] as const;
+
+  for (const species of SPECIES) {
+    await prisma.species.upsert({
+      where: { name: species.name },
+      update: {},
+      create: {
+        name: species.name,
+        scientificName: species.scientificName,
+      },
+    });
+  }
 
   console.log("Seed completed.");
 }
