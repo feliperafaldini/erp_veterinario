@@ -130,7 +130,36 @@ async function main() {
   }
 
   // Specialty: nenhuma definida como seed inicial na documentação
-  // Allergy/Medication/Vaccine: sem dados iniciais definidos
+  // Medication/Vaccine: sem dados iniciais definidos
+
+  // ============================================================
+  // Allergy — alergias comuns em clínica veterinária
+  // ============================================================
+
+  console.log("Seeding allergies...");
+  const ALLERGIES = [
+    { name: "Proteína bovina", description: "Alergia a proteínas de carne bovina" },
+    { name: "Frango", description: "Alergia a proteínas de frango" },
+    { name: "Milho", description: "Alergia a milho ou derivados" },
+    { name: "Soja", description: "Alergia a soja ou derivados" },
+    { name: "Lactose", description: "Intolerância ou alergia a lactose" },
+    { name: "Pulgas", description: "Dermatite alérgica causada por picadas de pulgas" },
+    { name: "Poeira", description: "Alergia a poeira doméstica" },
+    { name: "Pólen", description: "Alergia a grãos de pólen" },
+    { name: "Ácaros", description: "Alergia a ácaros" },
+    { name: "Medicamentos", description: "Reação alérgica a medicamentos" },
+  ] as const;
+
+  for (const allergy of ALLERGIES) {
+    await prisma.allergy.upsert({
+      where: { name: allergy.name },
+      update: {},
+      create: {
+        name: allergy.name,
+        description: allergy.description,
+      },
+    });
+  }
 
   // ============================================================
   // Specialty — especialidades veterinárias comuns
