@@ -133,6 +133,32 @@ async function main() {
   // Allergy/Medication/Vaccine: sem dados iniciais definidos
 
   // ============================================================
+  // Specialty — especialidades veterinárias comuns
+  // ============================================================
+
+  console.log("Seeding specialties...");
+  const SPECIALTIES = [
+    "Anestesiologia",
+    "Cardiologia",
+    "Cirurgia",
+    "Clínica Médica",
+    "Dermatologia",
+    "Neurologia",
+    "Oftalmologia",
+    "Oncologia",
+    "Ortopedia",
+    "Patologia Veterinária",
+  ] as const;
+
+  for (const name of SPECIALTIES) {
+    await prisma.specialty.upsert({
+      where: { name },
+      update: {},
+      create: { name },
+    });
+  }
+
+  // ============================================================
   // Species — espécies comuns em clínica veterinária
   // ============================================================
 
