@@ -30,3 +30,4 @@ test-results/
 
 # Prisma
 *.db
+*.tsbuildinfo

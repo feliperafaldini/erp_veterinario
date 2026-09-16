@@ -176,10 +176,15 @@ export class AuthService {
       expiresAt,
     });
 
-    const accessToken = this.jwtService.sign({
-      sub: userId,
-      tenantId: dto.tenantId,
-    });
+    const accessToken = this.jwtService.sign(
+      {
+        sub: userId,
+        tenantId: dto.tenantId,
+      },
+      {
+        expiresIn: Number(this.configService.get('JWT_EXPIRATION', 900)),
+      },
+    );
 
     return {
       accessToken,
