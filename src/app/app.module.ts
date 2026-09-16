@@ -8,6 +8,7 @@ import { BreedModule } from '../breeds';
 import { SpecialtyModule } from '../specialties';
 import { TutorModule } from '../tutors';
 import { AllergyModule } from '../allergies';
+import { VaccineModule } from '../vaccines';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { AllergyModule } from '../allergies';
     SpecialtyModule,
     TutorModule,
     AllergyModule,
+    VaccineModule,
   ],
 })
 export class AppModule {}

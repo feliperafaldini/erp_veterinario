@@ -130,7 +130,36 @@ async function main() {
   }
 
   // Specialty: nenhuma definida como seed inicial na documentação
-  // Medication/Vaccine: sem dados iniciais definidos
+  // Medication: sem dados iniciais definidos
+
+  // ============================================================
+  // Vaccine — vacinas veterinárias comuns
+  // ============================================================
+
+  console.log("Seeding vaccines...");
+  const VACCINES = [
+    { name: "Vacina antirrábica", description: "Proteção contra raiva" },
+    { name: "Vacina múltipla canina", description: "Proteção contra múltiplas doenças caninas (DHLP)" },
+    { name: "Vacina múltipla felina", description: "Proteção contra múltiplas doenças felinas" },
+    { name: "Vacina contra giárdia", description: "Proteção contra giárdia" },
+    { name: "Vacina contra leptospirose", description: "Proteção contra leptospirose" },
+    { name: "Vacina contra tosse dos canis", description: "Proteção contra traqueobronqueite infecciosa" },
+    { name: "Vacina tríplice felina", description: "Proteção contra panleucopenia, calicivírus e herpesvírus felino" },
+    { name: "Vacina quádrupla felina", description: "Tríplice felina + clamídia" },
+    { name: "Vacina quíntupla felina", description: "Quádrupla felina + FeLV" },
+    { name: "Vacina contra rinotraqueíte felina", description: "Proteção contra herpesvírus felino (rinotraqueíte)" },
+  ] as const;
+
+  for (const vaccine of VACCINES) {
+    await prisma.vaccine.upsert({
+      where: { name: vaccine.name },
+      update: {},
+      create: {
+        name: vaccine.name,
+        description: vaccine.description,
+      },
+    });
+  }
 
   // ============================================================
   // Allergy — alergias comuns em clínica veterinária
