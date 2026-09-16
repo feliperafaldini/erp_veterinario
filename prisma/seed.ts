@@ -35,6 +35,10 @@ const PERMISSIONS = [
   { key: "TUTOR_READ", resource: "TUTOR", action: "READ" },
   { key: "TUTOR_UPDATE", resource: "TUTOR", action: "UPDATE" },
   { key: "TUTOR_DEACTIVATE", resource: "TUTOR", action: "DEACTIVATE" },
+  { key: "VETERINARIAN_CREATE", resource: "VETERINARIAN", action: "CREATE" },
+  { key: "VETERINARIAN_READ", resource: "VETERINARIAN", action: "READ" },
+  { key: "VETERINARIAN_UPDATE", resource: "VETERINARIAN", action: "UPDATE" },
+  { key: "VETERINARIAN_DEACTIVATE", resource: "VETERINARIAN", action: "DEACTIVATE" },
 ] as const;
 
 // ============================================================
@@ -58,6 +62,10 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "TUTOR_READ",
     "TUTOR_UPDATE",
     "TUTOR_DEACTIVATE",
+    "VETERINARIAN_CREATE",
+    "VETERINARIAN_READ",
+    "VETERINARIAN_UPDATE",
+    "VETERINARIAN_DEACTIVATE",
   ],
   VETERINARIAN: [
     "ANIMAL_CREATE",

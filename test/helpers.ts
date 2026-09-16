@@ -62,6 +62,9 @@ export async function cleanupDatabase(app: INestApplication): Promise<void> {
   await prisma.role.deleteMany();
   await prisma.tutor.deleteMany();
   await prisma.tutorIdentity.deleteMany();
+  await prisma.veterinarianSpecialty.deleteMany();
+  await prisma.tenantVeterinarian.deleteMany();
+  await prisma.veterinarian.deleteMany();
 }
 
 export async function seedRolesAndPermissions(
@@ -87,6 +90,10 @@ export async function seedRolesAndPermissions(
     { key: 'TUTOR_READ', resource: 'TUTOR', action: 'READ' },
     { key: 'TUTOR_UPDATE', resource: 'TUTOR', action: 'UPDATE' },
     { key: 'TUTOR_DEACTIVATE', resource: 'TUTOR', action: 'DEACTIVATE' },
+    { key: 'VETERINARIAN_CREATE', resource: 'VETERINARIAN', action: 'CREATE' },
+    { key: 'VETERINARIAN_READ', resource: 'VETERINARIAN', action: 'READ' },
+    { key: 'VETERINARIAN_UPDATE', resource: 'VETERINARIAN', action: 'UPDATE' },
+    { key: 'VETERINARIAN_DEACTIVATE', resource: 'VETERINARIAN', action: 'DEACTIVATE' },
   ];
 
   for (const perm of permissions) {
@@ -107,6 +114,10 @@ export async function seedRolesAndPermissions(
       'TUTOR_READ',
       'TUTOR_UPDATE',
       'TUTOR_DEACTIVATE',
+      'VETERINARIAN_CREATE',
+      'VETERINARIAN_READ',
+      'VETERINARIAN_UPDATE',
+      'VETERINARIAN_DEACTIVATE',
     ],
     VETERINARIAN: [
       'ANIMAL_CREATE',
