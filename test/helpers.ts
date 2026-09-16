@@ -60,6 +60,8 @@ export async function cleanupDatabase(app: INestApplication): Promise<void> {
   await prisma.rolePermission.deleteMany();
   await prisma.permission.deleteMany();
   await prisma.role.deleteMany();
+  await prisma.tutor.deleteMany();
+  await prisma.tutorIdentity.deleteMany();
 }
 
 export async function seedRolesAndPermissions(
