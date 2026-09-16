@@ -130,7 +130,35 @@ async function main() {
   }
 
   // Specialty: nenhuma definida como seed inicial na documentação
-  // Medication: sem dados iniciais definidos
+
+  // ============================================================
+  // Medication — medicamentos veterinários comuns
+  // ============================================================
+
+  console.log("Seeding medications...");
+  const MEDICATIONS = [
+    { name: "Amoxicilina", description: "Antibiótico beta-lactâmico de amplo espectro" },
+    { name: "Amoxicilina + Clavulanato", description: "Antibiótico beta-lactâmico com inibidor de beta-lactamase" },
+    { name: "Enrofloxacino", description: "Antibiótico fluoroquinolona de amplo espectro" },
+    { name: "Metronidazol", description: "Antibiótico e antiparasitário de amplo espectro" },
+    { name: "Doxiciclina", description: "Antibiótico tetraciclina de amplo espectro" },
+    { name: "Prednisolona", description: "Corticosteroide anti-inflamatório e imunossupressor" },
+    { name: "Meloxicam", description: "Anti-inflamatório não esteroide (AINE) com ação analgésica" },
+    { name: "Dipirona", description: "Analgésico e antipirético" },
+    { name: "Ivermectina", description: "Antiparasitário antihelmíntico e acaricida" },
+    { name: "Furosemida", description: "Diurético de alça para tratamento de insuficiência cardíaca" },
+  ] as const;
+
+  for (const medication of MEDICATIONS) {
+    await prisma.medication.upsert({
+      where: { name: medication.name },
+      update: {},
+      create: {
+        name: medication.name,
+        description: medication.description,
+      },
+    });
+  }
 
   // ============================================================
   // Vaccine — vacinas veterinárias comuns
