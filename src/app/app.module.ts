@@ -13,6 +13,7 @@ import { MedicationModule } from '../medications';
 import { VeterinarianModule } from '../veterinarians';
 import { AnimalModule } from '../animals';
 import { AnimalTutorModule } from '../animal-tutor';
+import { AnimalWeightRecordModule } from '../animal-weight-record';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { AnimalTutorModule } from '../animal-tutor';
     VeterinarianModule,
     AnimalModule,
     AnimalTutorModule,
+    AnimalWeightRecordModule,
   ],
 })
 export class AppModule {}
