@@ -318,6 +318,30 @@ async function main() {
     }
   }
 
+  // ============================================================
+  // Breed — "Sem raça definida" para cada Species
+  // ============================================================
+
+  console.log("Seeding default breeds (Sem raça definida)...");
+
+  const allSpecies = await prisma.species.findMany();
+
+  for (const species of allSpecies) {
+    await prisma.breed.upsert({
+      where: {
+        speciesId_name: {
+          speciesId: species.id,
+          name: "Sem raça definida",
+        },
+      },
+      update: {},
+      create: {
+        speciesId: species.id,
+        name: "Sem raça definida",
+      },
+    });
+  }
+
   console.log("Seed completed.");
 }
 

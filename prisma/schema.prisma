@@ -286,7 +286,7 @@ model TutorEmergencyContact {
 
 model Animal {
   id                 String               @id @default(uuid()) @db.Uuid
-  internalCode       String               @unique
+  internalCode       String               @unique @default(dbgenerated())
   name               String?
   speciesId          String               @db.Uuid
   breedId            String               @db.Uuid

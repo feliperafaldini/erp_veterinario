@@ -146,11 +146,12 @@ describe('BREEDS', () => {
         .expect(200);
 
       expect(Array.isArray(response.body)).toBe(true);
-      expect(response.body.length).toBe(2);
+      expect(response.body.length).toBe(6);
 
       const names = response.body.map((b: any) => b.name);
       expect(names).toContain('Labrador Retriever');
       expect(names).toContain('Poodle');
+      expect(names).toContain('Sem raça definida');
       expect(names).not.toContain('Siamês');
     });
 
