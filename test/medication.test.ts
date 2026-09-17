@@ -47,6 +47,27 @@ describe('MEDICATIONS', () => {
   beforeEach(async () => {
     await cleanupDatabase(app);
     await seedRolesAndPermissions(app);
+
+    const prisma = getPrisma(app);
+
+    const medication = await prisma.medication.upsert({
+      where: { name: 'Amoxicilina' },
+      update: {},
+      create: {
+        name: 'Amoxicilina',
+        description: 'Antibiótico beta-lactâmico de amplo espectro',
+      },
+    });
+    medicationId = medication.id;
+
+    await prisma.medication.upsert({
+      where: { name: 'Meloxicam' },
+      update: {},
+      create: {
+        name: 'Meloxicam',
+        description: 'Anti-inflamatório não esteroide (AINE) com ação analgésica',
+      },
+    });
   });
 
   describe('GET /api/medications', () => {

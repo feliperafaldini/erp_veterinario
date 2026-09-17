@@ -47,6 +47,26 @@ describe('ALLERGIES', () => {
   beforeEach(async () => {
     await cleanupDatabase(app);
     await seedRolesAndPermissions(app);
+
+    const prisma = getPrisma(app);
+    const allergy = await prisma.allergy.upsert({
+      where: { name: 'Pulgas' },
+      update: {},
+      create: {
+        name: 'Pulgas',
+        description: 'Dermatite alérgica causada por picadas de pulgas',
+      },
+    });
+    allergyId = allergy.id;
+
+    await prisma.allergy.upsert({
+      where: { name: 'Pólen' },
+      update: {},
+      create: {
+        name: 'Pólen',
+        description: 'Alergia a grãos de pólen',
+      },
+    });
   });
 
   describe('GET /api/allergies', () => {

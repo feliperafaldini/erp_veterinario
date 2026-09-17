@@ -47,6 +47,27 @@ describe('VACCINES', () => {
   beforeEach(async () => {
     await cleanupDatabase(app);
     await seedRolesAndPermissions(app);
+
+    const prisma = getPrisma(app);
+
+    const vaccine = await prisma.vaccine.upsert({
+      where: { name: 'Vacina antirrábica' },
+      update: {},
+      create: {
+        name: 'Vacina antirrábica',
+        description: 'Proteção contra raiva',
+      },
+    });
+    vaccineId = vaccine.id;
+
+    await prisma.vaccine.upsert({
+      where: { name: 'Vacina tríplice felina' },
+      update: {},
+      create: {
+        name: 'Vacina tríplice felina',
+        description: 'Proteção contra panleucopenia, calicivírus e herpesvírus felino',
+      },
+    });
   });
 
   describe('GET /api/vaccines', () => {
