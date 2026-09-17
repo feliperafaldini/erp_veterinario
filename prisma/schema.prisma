@@ -57,6 +57,8 @@ model Tenant {
   tutorEmergencyContacts TutorEmergencyContact[]
   tutorPhones            TutorPhone[]
   userTenants            UserTenant[]
+  appointments           Appointment[]
+  consultations         Consultation[]
 
   @@map("Tenant")
 }
@@ -193,6 +195,8 @@ model TenantVeterinarian {
   updatedAt      DateTime     @updatedAt
   tenant         Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   veterinarian   Veterinarian @relation(fields: [veterinarianId], references: [id], onDelete: Cascade)
+  appointments   Appointment[]
+  consultations  Consultation[]
 
   @@unique([tenantId, veterinarianId])
   @@index([veterinarianId])
@@ -227,6 +231,8 @@ model Tutor {
   addresses         TutorAddress[]
   emergencyContacts TutorEmergencyContact[]
   phones            TutorPhone[]
+  appointments      Appointment[]
+  consultations     Consultation[]
 
   @@unique([tenantId, tutorIdentityId])
   @@unique([tenantId, email])
@@ -312,6 +318,8 @@ model Animal {
   animalVaccinations AnimalVaccination[]
   weightRecords      AnimalWeightRecord[]
   tenantAnimals      TenantAnimal[]
+  appointments       Appointment[]
+  consultations      Consultation[]
 
   @@index([speciesId])
   @@index([breedId])
@@ -532,4 +540,75 @@ enum AnimalStatus {
 enum TenantAnimalStatus {
   ACTIVE
   INACTIVE
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ConsultationStatus {
+  OPEN
+  COMPLETED
+  CANCELLED
+}
+
+model Appointment {
+  id                String            @id @default(uuid()) @db.Uuid
+  tenantId          String            @db.Uuid
+  animalId          String            @db.Uuid
+  veterinarianId    String            @db.Uuid
+  tutorId           String?           @db.Uuid
+  scheduledAt       DateTime
+  status            AppointmentStatus @default(SCHEDULED)
+  reason            String?
+  notes             String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  tenant            Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  animal            Animal            @relation(fields: [animalId], references: [id], onDelete: Cascade)
+  veterinarian      TenantVeterinarian @relation(fields: [veterinarianId], references: [id], onDelete: Cascade)
+  tutor             Tutor?            @relation(fields: [tutorId], references: [id], onDelete: SetNull)
+  consultations     Consultation[]
+
+  @@index([tenantId])
+  @@index([animalId])
+  @@index([veterinarianId])
+  @@index([tutorId])
+  @@index([scheduledAt])
+  @@map("Appointment")
+}
+
+model Consultation {
+  id                String              @id @default(uuid()) @db.Uuid
+  tenantId          String              @db.Uuid
+  appointmentId     String?             @db.Uuid
+  animalId          String              @db.Uuid
+  veterinarianId    String              @db.Uuid
+  tutorId           String?             @db.Uuid
+  startedAt         DateTime
+  finishedAt        DateTime?
+  status            ConsultationStatus  @default(OPEN)
+  chiefComplaint    String?
+  anamnesis         String?
+  physicalExam      String?
+  clinicalNotes     String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  tenant            Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  appointment       Appointment?        @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  animal            Animal              @relation(fields: [animalId], references: [id], onDelete: Cascade)
+  veterinarian      TenantVeterinarian  @relation(fields: [veterinarianId], references: [id], onDelete: Cascade)
+  tutor             Tutor?              @relation(fields: [tutorId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([appointmentId])
+  @@index([animalId])
+  @@index([veterinarianId])
+  @@index([tutorId])
+  @@index([startedAt])
+  @@map("Consultation")
 }

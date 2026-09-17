@@ -55,6 +55,8 @@ export async function cleanupDatabase(app: INestApplication): Promise<void> {
   await prisma.session.deleteMany();
   await prisma.userTenantRole.deleteMany();
   await prisma.userTenant.deleteMany();
+  await prisma.consultation.deleteMany();
+  await prisma.appointment.deleteMany();
   await prisma.animalVaccination.deleteMany();
   await prisma.animalMedication.deleteMany();
   await prisma.animalAllergy.deleteMany();

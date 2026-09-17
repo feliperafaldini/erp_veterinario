@@ -17,6 +17,8 @@ import { AnimalWeightRecordModule } from '../animal-weight-record';
 import { AnimalAllergyModule } from '../animal-allergy';
 import { AnimalMedicationModule } from '../animal-medication';
 import { AnimalVaccinationModule } from '../animal-vaccination';
+import { AppointmentModule } from '../appointments';
+import { ConsultationModule } from '../consultations';
 
 @Module({
   imports: [
@@ -40,6 +42,8 @@ import { AnimalVaccinationModule } from '../animal-vaccination';
     AnimalAllergyModule,
     AnimalMedicationModule,
     AnimalVaccinationModule,
+    AppointmentModule,
+    ConsultationModule,
   ],
 })
 export class AppModule {}
