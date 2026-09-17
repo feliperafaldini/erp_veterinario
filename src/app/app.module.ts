@@ -12,6 +12,7 @@ import { VaccineModule } from '../vaccines';
 import { MedicationModule } from '../medications';
 import { VeterinarianModule } from '../veterinarians';
 import { AnimalModule } from '../animals';
+import { AnimalTutorModule } from '../animal-tutor';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { AnimalModule } from '../animals';
     MedicationModule,
     VeterinarianModule,
     AnimalModule,
+    AnimalTutorModule,
   ],
 })
 export class AppModule {}

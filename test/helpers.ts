@@ -55,6 +55,9 @@ export async function cleanupDatabase(app: INestApplication): Promise<void> {
   await prisma.session.deleteMany();
   await prisma.userTenantRole.deleteMany();
   await prisma.userTenant.deleteMany();
+  await prisma.animalTutor.deleteMany();
+  await prisma.tenantAnimal.deleteMany();
+  await prisma.animal.deleteMany();
   await prisma.tenant.deleteMany();
   await prisma.user.deleteMany();
   await prisma.rolePermission.deleteMany();
@@ -65,8 +68,6 @@ export async function cleanupDatabase(app: INestApplication): Promise<void> {
   await prisma.veterinarianSpecialty.deleteMany();
   await prisma.tenantVeterinarian.deleteMany();
   await prisma.veterinarian.deleteMany();
-  await prisma.tenantAnimal.deleteMany();
-  await prisma.animal.deleteMany();
 }
 
 export async function seedRolesAndPermissions(
