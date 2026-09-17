@@ -65,6 +65,8 @@ export async function cleanupDatabase(app: INestApplication): Promise<void> {
   await prisma.veterinarianSpecialty.deleteMany();
   await prisma.tenantVeterinarian.deleteMany();
   await prisma.veterinarian.deleteMany();
+  await prisma.tenantAnimal.deleteMany();
+  await prisma.animal.deleteMany();
 }
 
 export async function seedRolesAndPermissions(
