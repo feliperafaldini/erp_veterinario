@@ -19,6 +19,7 @@ import { AnimalMedicationModule } from '../animal-medication';
 import { AnimalVaccinationModule } from '../animal-vaccination';
 import { AppointmentModule } from '../appointments';
 import { ConsultationModule } from '../consultations';
+import { DiagnosisModule } from '../diagnosis';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { ConsultationModule } from '../consultations';
     AnimalVaccinationModule,
     AppointmentModule,
     ConsultationModule,
+    DiagnosisModule,
   ],
 })
 export class AppModule {}
