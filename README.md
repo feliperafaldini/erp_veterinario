@@ -391,16 +391,36 @@ cd erp_veterinario
 
 ### Configurar variáveis de ambiente
 
-Crie um arquivo `.env` na raiz do projeto.
+Copie o exemplo e ajuste os valores:
+
+```bash
+cp .env.example .env
+```
 
 As credenciais e secrets utilizados localmente não devem ser commitados no Git.
 
-### Iniciar o PostgreSQL
+### Iniciar o PostgreSQL e a aplicação
 
-O banco de dados é executado através do Docker Compose.
+O ambiente local é executado pelo Docker Compose (`docker-compose.yml`), com o
+PostgreSQL e a aplicação:
 
 ```bash
 docker compose up -d
+```
+
+| Serviço | Origem | Porta | Observação |
+|---|---|---|---|
+| `db` | `postgres:16` | `5432` | Volume nomeado `pgdata`; locale padrão `en_US.utf8` |
+| `app` | `Dockerfile` deste repositório | `3000` | Executa `prisma migrate deploy`, depois o seed e sobe a API |
+
+O locale do banco não deve ser alterado para `C`: as listagens ordenadas por
+nome esperam ordenação alfabética, não ordem de bytes (ver *Testes*, abaixo).
+
+Para subir somente o banco e rodar a aplicação na máquina, com hot reload:
+
+```bash
+docker compose up -d db
+npm run start:dev
 ```
 
 ### Instalar dependências
@@ -454,6 +474,35 @@ Uma resposta esperada é:
 }
 ```
 
+### Testes
+
+A suíte (Vitest + Supertest) fala com o PostgreSQL apontado por `DATABASE_URL`.
+Pré-condições:
+
+```bash
+npx prisma migrate deploy
+npx prisma db seed
+npm test
+```
+
+Observações:
+
+* **Seed antes de rodar a suíte.** Alguns testes dependem dos dados de catálogo
+  criados pelo seed (`prisma/seed.ts`); sem ele, casos de `test/medication.test.ts`
+  falham porque um teste anterior cria a mesma linha sem a descrição esperada.
+* **A suíte apaga os dados.** `test/helpers.ts` limpa as tabelas de domínio antes
+  de cada caso: use um banco de desenvolvimento/descartável, nunca um ambiente
+  com dados reais.
+* **Ordenação.** Os testes de listagem ordenada comparam a resposta com
+  `Intl.Collator`, reproduzindo a ordenação alfabética do locale `en_US.utf8`
+  usado pelo `postgres:16`. Com a collation `C` do PostgreSQL a ordem seria por
+  bytes e os casos falhariam.
+* Comandos úteis: `npm run test:watch`, `npm run test:coverage`,
+  `npm run typecheck`.
+
+O pipeline de CI (`.github/workflows/ci.yml`) executa nesta ordem: validação do
+schema, `typecheck`, build, migrations, seed e suíte completa.
+
 ## Scripts
 
 Os principais scripts disponíveis no projeto incluem:
@@ -462,12 +511,20 @@ Os principais scripts disponíveis no projeto incluem:
 npm run start:dev
 npm run build
 npm run start
+npm run typecheck
+npm test
+npm run prisma:validate
 npm run prisma:generate
 npm run prisma:migrate
 npm run prisma:seed
 ```
 
-Os scripts de teste serão ampliados conforme a suíte automatizada do projeto for implementada.
+> Ambiente com `node_modules` instalado em sistema de arquivos Windows/NTFS:
+> os atalhos de `node_modules/.bin` não executam no Linux. Use
+> `node node_modules/vitest/vitest.mjs run`,
+> `node node_modules/typescript/bin/tsc --noEmit` e
+> `node node_modules/prisma/build/index.js <comando>` no lugar de `npx`/`npm run`
+> nesse caso (ou reinstale as dependências em um diretório nativo do Linux).
 
 ## Documentação
 

@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: erp_veterinario
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U user -d erp_veterinario"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://user:password@localhost:5432/erp_veterinario?schema=public
+      JWT_SECRET: ci-jwt-secret-not-a-real-secret
+      JWT_EXPIRATION: "900"
+      REFRESH_TOKEN_EXPIRATION_DAYS: "7"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Validar schema do Prisma
+        run: npm run prisma:validate
+
+      - name: Gerar Prisma Client
+        run: npm run prisma:generate
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Aplicar migrations
+        run: npm run prisma:deploy
+
+      - name: Seed (roles, permissões e catálogos)
+        run: npm run prisma:seed
+
+      - name: Testes
+        run: npm test
