@@ -270,6 +270,20 @@ export function extractRefreshTokenFromResponse(
   return refreshCookie?.split(';')[0]?.split('=')[1];
 }
 
+/**
+ * Ordem alfabética esperada pelas listagens ordenadas da API.
+ *
+ * O serviço ordena por `ORDER BY name` no PostgreSQL, ou seja, a ordem
+ * devolvida segue a collation do banco (`en_US.utf8` em docker-compose e CI).
+ * `Array.sort()` sem comparador usa ordem de code points UTF-16 e trata
+ * acentos como caracteres separados, o que diverge da collation; por isso a
+ * comparação usa `Intl.Collator`, que reproduz a ordem alfabética.
+ */
+export function sortedAlphabetically(names: string[]): string[] {
+  const collator = new Intl.Collator('en');
+  return [...names].sort((a, b) => collator.compare(a, b));
+}
+
 export function parseJwtPayload(token: string): any {
   const base64Url = token.split('.')[1];
   const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
