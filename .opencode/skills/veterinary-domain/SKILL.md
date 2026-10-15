@@ -41,23 +41,27 @@ Consultar `docs/domain-model.md` para o modelo completo.
 
 ## Conceitos
 
-Os conceitos abaixo estão definidos e especificados:
+Conceitos já modelados e implementados (model, migration, endpoints e testes):
 
 * Tutor (cadastro por clínica com TutorIdentity global)
 * Animal (entidade global com TenantAnimal)
-* Agendamento
-* Atendimento
+* Agendamento (`Appointment`)
+* Atendimento (`Consultation`)
+* Diagnóstico (`Diagnosis`)
+* Vacinação (`AnimalVaccination`)
+* Alergias e medicamentos em uso (`AnimalAllergy`, `AnimalMedication`)
+* Histórico de peso (`AnimalWeightRecord`)
+
+Conceitos previstos no escopo do projeto, ainda **sem** model, sem regra
+documentada e sem implementação:
+
 * Prontuário
 * Procedimento
 * Exame
-* Vacinação
 * Prescrição
-* Produto
-* Estoque
-* Venda
-* Financeiro
+* Produto, Estoque, Venda e Financeiro
 
-Consultar `docs/domain-model.md` e `docs/business-rules.md` para detalhes de Tutor e Animal.
+Consultar `docs/domain-model.md` e `docs/business-rules.md` para detalhes de Tutor e Animal. A seção 5 do domain-model descreve a estrutura de Appointment, Consultation e Diagnosis; as regras de negócio desses três ainda não foram registradas.
 
 ## Modelagem
 
@@ -112,12 +116,23 @@ As seguintes relações já foram definidas pela especificação funcional:
 * Animal ↔ Vaccine: N:M via AnimalVaccination
 * Animal ↔ WeightRecord: 1:N
 
+## Relações modeladas sem regra documentada
+
+Já existem no banco (`prisma/schema.prisma`), mas a regra de negócio que as
+sustenta não foi registrada em `docs/business-rules.md`:
+
+* Agendamento ↔ Tenant: obrigatória (registro é tenant-scoped)
+* Agendamento ↔ Animal: obrigatória (`Appointment.animalId`)
+* Agendamento ↔ Veterinário: obrigatória (`Appointment.veterinarianId` → `TenantVeterinarian`)
+* Agendamento ↔ Tutor: opcional (`onDelete: SetNull`)
+* Atendimento ↔ Agendamento: opcional (`Consultation.appointmentId`, `onDelete: SetNull`)
+* Atendimento ↔ Animal: obrigatória
+* Atendimento ↔ Veterinário: obrigatória (`TenantVeterinarian`)
+* Diagnóstico ↔ Atendimento: obrigatória (FK `RESTRICT`)
+
 ## Relações ainda não definidas
 
-* Animal ↔ Veterinário
-* Atendimento ↔ Animal
-* Atendimento ↔ Veterinário
-* Agendamento ↔ Atendimento
+* Animal ↔ Veterinário (direto, fora de agendamento ou atendimento)
 * Prontuário ↔ Atendimento
 
 Essas relações devem ser definidas antes da modelagem definitiva do banco de dados do domínio.

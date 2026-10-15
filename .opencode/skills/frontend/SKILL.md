@@ -6,6 +6,12 @@ description: Orienta o desenvolvimento do frontend React + TypeScript do ERP vet
 
 # Frontend
 
+> **Situação atual:** ainda não há frontend neste repositório. Não existe
+> diretório de frontend nem dependências React em `package.json`. Esta skill
+> orienta o trabalho a partir do momento em que a UI for iniciada — as etapas
+> de "verificar componentes, rotas e padrões existentes" só terão o que apoiar
+> depois da primeira tela.
+
 ## Stack
 
 * React

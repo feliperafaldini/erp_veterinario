@@ -40,12 +40,14 @@ Consultar `docs/architecture.md` para detalhes do TenantGuard e fluxo de autoriz
 
 ## Autenticação e Sessões
 
-* Login: `POST /auth/login` com email + senha. Retorna lista de tenants.
-* Seleção de tenant: `POST /auth/select-tenant` com tenantId. Cria Session e emite tokens.
-* Access token: JWT com `sub`, `tenantId`, `iat`, `exp` (15 min). Não contém roles nem permissions.
+* Registro: `POST /api/auth/register` com dados do usuário e do tenant. Cria User, Tenant, UserTenant ativo e ADMIN. Retorna `{ user, tenant }`.
+* Login: `POST /api/auth/login` com email + senha. Retorna lista de tenants com `id`, `name` e `logoUrl`.
+* Seleção de tenant: `POST /api/auth/select-tenant`. Cria Session e emite tokens.
+  * A implementação atual exige também `userId` no corpo e o endpoint não está autenticado — discrepância registrada em `docs/architecture.md`; não reforce esse formato em trabalho novo.
+* Access token: JWT com `sub`, `tenantId`, `iat`, `exp` (15 min por padrão, `JWT_EXPIRATION`). Não contém roles nem permissions.
 * Refresh token: string aleatória, hash SHA-256 no banco, cookie HttpOnly.
-* Refresh: `POST /auth/refresh`. Valida Session, emite novo access token.
-* Logout: `POST /auth/logout`. Marca Session como revogada.
+* Refresh: `POST /api/auth/refresh`. Valida Session, emite novo access token.
+* Logout: `POST /api/auth/logout`. Marca Session como revogada.
 
 A Session é criada apenas durante a seleção do Tenant, não durante o login.
 

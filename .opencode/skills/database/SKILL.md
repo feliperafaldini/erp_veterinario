@@ -34,7 +34,6 @@ Consultar `docs/domain-model.md` para o escopo de cada entidade.
 **Global (sem tenantId):**
 * User
 * Tenant
-* UserTenant
 * UserTenantRole
 * Role
 * Permission
@@ -50,8 +49,10 @@ Consultar `docs/domain-model.md` para o escopo de cada entidade.
 * Medication
 * Vaccine
 
+**Pivôs globais que apontam um tenant (carregam `tenantId`):**
+* UserTenant — vincula User a Tenant; é o escopo de autorização, não um dado de negócio do tenant
+
 **Tenant-scoped (com tenantId):**
-* Tenant
 * Tutor
 * TutorPhone
 * TutorAddress
@@ -60,6 +61,9 @@ Consultar `docs/domain-model.md` para o escopo de cada entidade.
 * TenantAnimal
 * AnimalTutor
 * Session
+* Appointment
+* Consultation
+* Diagnosis
 
 **Global com rastreabilidade de proveniência:**
 Essas entidades são globais e compartilhadas entre tenants, mas possuem `tenantId` ou `registeredByTenantId` para indicar qual clínica registrou a informação.
@@ -102,7 +106,7 @@ Não assumir que o seed roda automaticamente durante `prisma migrations dev` ou 
 
 O seed deve usar `upsert` para garantir idempotência.
 
-Consultar `prisma/seed.ts` para a lista de dados iniciais (roles, permissions, specialties).
+Consultar `prisma/seed.ts` para a lista de dados iniciais: roles, permissions (31) e a matriz role → permissão, além dos catálogos clínicos (medicamentos, vacinas, alergias, especialidades, espécies e raças).
 
 ## Modelagem
 
