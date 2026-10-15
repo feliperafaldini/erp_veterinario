@@ -1,469 +1,100 @@
-# ERP Veterinário — Regras do Projeto
+# ERP Veterinário — Instruções do Projeto
 
-## 1. Objetivo
+## Objetivo e prioridades
 
-Este projeto é um ERP veterinário desenvolvido como um SaaS multi-tenant.
+Este projeto é um ERP veterinário SaaS multi-tenant. Cada estabelecimento é um tenant, e os dados de cada tenant devem permanecer isolados. Preserve a clareza arquitetural, segurança, integridade dos dados, testabilidade e facilidade de manutenção. Não introduza regras de negócio por suposição.
 
-O sistema será oferecido como uma plataforma para múltiplos estabelecimentos veterinários independentes.
+## Fontes de verdade
 
-Cada estabelecimento representa um tenant lógico do sistema.
+Antes de implementar, inspecione o código, configuração, testes e convenções existentes; identifique módulos, abstrações e dependências relacionados e faça a menor alteração necessária.
 
-Os dados pertencentes a um estabelecimento devem permanecer isolados dos dados dos demais estabelecimentos.
+Use `docs/domain-model.md`, `docs/business-rules.md` e `docs/architecture.md` para regras e decisões documentadas. O código e os arquivos de configuração mostram a implementação atual, mas não anulam requisitos documentados. Se houver conflito entre requisito, documentação e implementação, registre a discrepância e não resolva uma regra de negócio ambígua por conta própria.
 
-O usuário autenticado somente poderá acessar dados dos estabelecimentos aos quais possui vínculo e autorização.
+Não reescreva partes sem necessidade, não duplique abstrações existentes e não altere arquivos alheios à tarefa.
 
-O sistema deve ser projetado desde o início considerando múltiplos tenants.
+## Stack e arquitetura
 
-Não implementar uma arquitetura single-clinic e tentar adicionar multi-tenancy posteriormente como uma alteração superficial.
+Stack definida pelo projeto:
 
-O isolamento entre tenants é um requisito fundamental de segurança e arquitetura.
+- Frontend: React, TypeScript, Vite, Tailwind CSS e shadcn/ui.
+- Backend: Node.js, TypeScript, NestJS e API REST.
+- Persistência: PostgreSQL e Prisma.
+- Autenticação: credenciais, Argon2id, JWT de curta duração e refresh token de longa duração.
+- Testes: Vitest, Supertest e Playwright quando aplicável.
+- Infraestrutura: Docker e Docker Compose.
 
-O sistema será desenvolvido de forma incremental, priorizando:
+Não substitua tecnologias da stack sem decisão explícita do projeto. Confira a configuração real antes de presumir que uma parte da stack (por exemplo, o frontend) já está implementada.
 
-* clareza arquitetural;
-* manutenção;
-* segurança;
-* isolamento de dados;
-* integridade dos dados;
-* testabilidade;
-* facilidade de evolução;
-* compreensão do código pelos desenvolvedores.
+O backend deve permanecer um monólito modular NestJS, organizado por domínio. Não adote microservices nem crie módulos apenas com base em exemplos documentais.
 
-O agente deve implementar o sistema de acordo com os requisitos definidos neste projeto e não criar regras de negócio por conta própria.
+## Regras de domínio
 
----
+Não invente regras clínicas, protocolos veterinários, dosagens, regras fiscais ou financeiras, preços, impostos, permissões, políticas de estoque, cancelamento ou comportamentos administrativos. Quando faltar uma regra, registre a lacuna e solicite uma definição antes de codificá-la.
 
-## 2. Stack oficial
+Classifique cada item levantado explicitamente como: requisito conhecido; regra de negócio definida; decisão técnica; hipótese ainda não confirmada. Trate hipóteses como pendentes de definição e não as transforme em código sem confirmação.
 
-### Frontend
-
-* React
-* TypeScript
-* Vite
-* Tailwind CSS
-* shadcn/ui
-
-### Backend
-
-* Node.js
-* TypeScript
-* NestJS
-* API REST
-
-### Persistência
-
-* PostgreSQL
-* Prisma ORM
-
-### Autenticação
-
-* autenticação baseada em credenciais;
-* Argon2id para armazenamento seguro de senhas;
-* JWT para autenticação;
-* access token de curta duração;
-* refresh token de longa duração;
-* controle de acesso baseado em papéis e permissões.
-
-### Testes
-
-* Vitest para testes unitários;
-* Supertest para testes de API;
-* Playwright para testes end-to-end.
-
-### Infraestrutura
-
-* Docker;
-* Docker Compose.
-
-### Controle de versão
-
-* Git;
-* GitHub.
-
-Não introduzir outra tecnologia para substituir uma dessas sem decisão explícita do projeto.
-
----
-
-## 3. Arquitetura
-
-O backend deve permanecer como um monólito modular.
-
-Não utilizar microservices.
-
-Os módulos de domínio devem permanecer separados dentro da aplicação NestJS.
-
-Exemplo conceitual:
-
-src/
-├── auth/
-├── users/
-├── tenants/
-├── tutors/
-├── animals/
-├── appointments/
-├── consultations/
-├── medical-records/
-├── vaccines/
-├── prescriptions/
-├── inventory/
-└── billing/
-
-A estrutura real poderá evoluir conforme os requisitos sejam definidos.
-
-Não criar módulos apenas com base neste exemplo.
-
----
-
-## 4. Multi-tenancy
-
-O sistema utiliza arquitetura SaaS multi-tenant.
-
-Cada estabelecimento veterinário constitui um tenant.
-
-A estratégia adotada para a primeira versão do sistema é:
-
-* PostgreSQL compartilhado;
-* isolamento lógico por `tenant_id`.
-
-Dados pertencentes a um tenant não podem ser acessados por outro tenant.
-
-A aplicação deve implementar isolamento de tenant em múltiplas camadas:
-
-1. o backend determina o contexto do tenant a partir da autenticação e autorização;
-2. a camada de acesso a dados deve respeitar o tenant atual;
-3. operações de leitura, criação, atualização e exclusão devem respeitar o tenant;
-4. testes automatizados devem verificar tentativas de acesso cross-tenant;
-5. PostgreSQL Row-Level Security (RLS) deve ser avaliado como camada adicional de defesa antes da primeira versão de produção.
-
-O frontend nunca deve ser considerado responsável por garantir isolamento entre tenants.
-
-Não confiar exclusivamente em filtros adicionados manualmente em controllers.
-
-Não permitir que o cliente informe livremente um `tenant_id` para obter acesso a outro tenant.
-
-A modelagem deve distinguir:
-
-* dados globais da plataforma;
-* dados pertencentes a um tenant;
-* dados pertencentes a um usuário dentro de um tenant.
-
-A estratégia de tabelas e relacionamentos com `tenant_id` deve ser definida durante a modelagem do domínio.
-
-Não assumir que toda tabela deve possuir `tenant_id` diretamente. Quando uma entidade estiver inequivocamente vinculada a um tenant através de outra entidade, essa relação deve ser analisada antes de duplicar a informação.
-
-A estratégia de banco compartilhado com `tenant_id` é uma decisão arquitetural da primeira versão. Uma eventual migração futura para schemas separados ou bancos separados exigirá um projeto de migração específico e não deve ser considerada uma mudança trivial.
-
----
-
-## 5. Princípios de desenvolvimento
-
-Antes de implementar qualquer funcionalidade:
-
-1. Inspecionar o código existente.
-2. Identificar os módulos e abstrações relacionados.
-3. Verificar as convenções já utilizadas.
-4. Verificar dependências e impactos.
-5. Implementar somente o necessário para a tarefa.
-
-Não reescrever partes do sistema sem necessidade.
-
-Não introduzir abstrações excessivas.
-
-Não duplicar código quando uma abstração existente puder ser reutilizada de maneira clara.
-
-Não alterar arquivos não relacionados à tarefa.
-
----
-
-## 6. Requisitos e regras de negócio
-
-Requisitos funcionais têm prioridade sobre suposições do agente.
-
-Nunca inventar:
-
-* regras clínicas;
-* protocolos veterinários;
-* regras fiscais;
-* regras financeiras;
-* preços;
-* impostos;
-* permissões;
-* protocolos de vacinação;
-* dosagens;
-* comportamentos administrativos.
-
-Quando uma regra de negócio estiver indefinida, registrar a lacuna em vez de assumir uma resposta arbitrária.
-
-Diferenciar claramente:
-
-* requisito conhecido;
-* regra de negócio definida;
-* decisão técnica;
-* hipótese ainda não confirmada.
-
----
-
-## 7. Domínio
-
-### Entidades
-
-Animal e Tutor são entidades distintas.
-
-Um Tutor pode possuir múltiplos Animais.
-
-Um Animal pode possuir múltiplos Tutores.
-
-Informações clínicas relevantes devem preservar histórico quando a alteração ou exclusão puder comprometer a rastreabilidade.
-
-Não sobrescrever dados históricos quando o requisito exigir histórico.
-
-Entidades e relações devem ser definidas a partir dos requisitos reais do projeto.
+Animal e Tutor são entidades distintas. Um Tutor pode estar associado a vários Animais, e um Animal a vários Tutores. Preserve histórico quando a alteração ou exclusão comprometer rastreabilidade.
 
 ### Tutor
 
-O Tutor possui uma identidade global mínima (TutorIdentity), mas o cadastro operacional existe por clínica.
-
-TutorIdentity contém: nome, documento (CPF/CNPJ), tipo do documento. Não contém telefone, email ou endereço.
-
-CPF/CNPJ são normalizados e únicos globalmente.
-
-Busca global por CPF é permitida para descobrir que existe um registro em outra clínica, sem expor dados da outra clínica.
-
-O nome do Tutor pertence à identidade global. Alterar o nome altera a identidade compartilhada e o nome visualizado por todas as clínicas.
-
-O cadastro de uma clínica referencia a TutorIdentity. Tutor, TutorPhone, TutorAddress e TutorEmergencyContact são tenant-scoped.
-
-Consultar `docs/domain-model.md` e `docs/business-rules.md` para detalhes completos.
+- `TutorIdentity` é global e contém nome, tipo de documento e CPF/CNPJ; não contém telefone, email ou endereço.
+- CPF/CNPJ são normalizados e únicos globalmente.
+- Busca global por documento pode revelar que existe cadastro em outra clínica, sem expor os dados dessa clínica.
+- O nome pertence à identidade global; sua alteração afeta todas as clínicas que a referenciam.
+- O cadastro operacional e os dados de contato do Tutor são tenant-scoped.
 
 ### Animal
 
-Animal é uma entidade GLOBAL no sistema. O mesmo Animal pode ser atendido por várias clínicas.
+- Animal é uma entidade global. `internalCode` é único globalmente e microchip, quando preenchido, também é globalmente único.
+- Nome, espécie, raça, sexo, castração, nascimento, foto, cor/pelagem e porte são atributos globais compartilhados.
+- Espécies e raças são entidades globais e dinâmicas.
+- Prontuário e outros dados privados da clínica permanecem no escopo do tenant.
+- Peso, alergias, medicamentos e vacinação são compartilhados com histórico e proveniência, conforme especificado nos documentos de domínio.
 
-Animal possui `internalCode` único GLOBALMENTE (não por tenant).
+## Multi-tenancy e segurança
 
-Microchip é opcional e único globalmente quando preenchido.
+O sistema é multi-tenant desde o início. Não implemente uma arquitetura single-clinic para adicionar multi-tenancy depois como uma alteração superficial; o isolamento entre tenants é requisito fundamental de segurança e arquitetura.
 
-Castração, espécie, raça, sexo, data de nascimento, nome, foto, cor/pelagem e porte são dados GLOBAIS compartilhados entre clínicas.
+A primeira versão usa PostgreSQL compartilhado com isolamento lógico por tenant. Diferencie dados globais da plataforma, dados tenant-scoped, dados do usuário dentro de um tenant e dados globais com proveniência. Não adicione `tenantId` automaticamente a toda entidade; determine o escopo a partir do modelo documentado.
 
-Prontuário, consultas e dados clínicos privados permanecem por tenant (TenantAnimal).
+O backend determina o tenant autorizado a partir da autenticação e da autorização. O cliente não pode escolher livremente um identificador de tenant para obter acesso. Toda operação sobre dados tenant-scoped — leitura, criação, atualização e exclusão — deve aplicar o contexto do tenant na camada apropriada; não dependa apenas do frontend ou de validação no controller. Inclua verificações cross-tenant nos testes das funcionalidades afetadas. Avalie PostgreSQL RLS como defesa adicional antes da primeira versão de produção. Migrar futuramente para schemas ou bancos separados exige projeto específico.
 
-Species e Breed são entidades globais e dinâmicas.
+Nunca armazene senhas em texto puro; use Argon2id. Mantenha segredos em variáveis de ambiente, fora do código e do Git, e nunca os registre em logs. A autorização é responsabilidade do backend. Trate falhas cross-tenant como problemas críticos.
 
-Peso, alergias, medicamentos e vacinação são dados compartilhados com histórico e rastreabilidade de proveniência.
+## Backend
 
-Consultar `docs/domain-model.md`, `docs/business-rules.md` e `docs/architecture.md` para detalhes completos.
+Controllers devem cuidar principalmente da camada HTTP; mantenha regras de negócio em services, use cases ou abstrações equivalentes. Valide entradas no backend e trate erros de forma consistente. Não exponha modelos internos do banco diretamente quando isso criar acoplamento desnecessário.
 
----
+### Autenticação e autorização
 
-## 8. Frontend
+- Login usa email e senha; após autenticar, o usuário seleciona explicitamente um tenant autorizado.
+- A Session é criada durante a seleção do tenant.
+- O access token JWT dura 15 minutos e contém somente `sub` e `tenantId` como claims de aplicação.
+- O refresh token é aleatório, stateful, armazenado no banco apenas como hash SHA-256 e enviado por cookie HttpOnly.
+- Roles iniciais: `ADMIN`, `VETERINARIAN` e `RECEPTIONIST`. Roles são globais; um usuário pode ter várias roles por tenant.
+- Permissions são granulares por recurso e ação, não ficam no JWT e são consultadas no backend com cache.
+- Platform Admin é representado por `User.isPlatformAdmin`; não existe tabela `PlatformAdmin`.
 
-O frontend deve utilizar:
+Consulte `docs/architecture.md` e `docs/domain-model.md` para detalhes e fluxos completos.
 
-* React;
-* TypeScript;
-* Vite;
-* Tailwind CSS;
-* shadcn/ui.
+## Frontend
 
-Reutilizar componentes existentes.
+Reutilize componentes e padrões existentes; antes de criar telas ou componentes, confira layout, rotas, formulários e consumo da API. Separe apresentação, estado da interface, comunicação com API e validação. O frontend não é autoridade para autorização ou regras críticas de negócio. Interfaces devem tratar carregamento, sucesso, erro, ausência de dados e validação conforme aplicável.
 
-Não criar componentes equivalentes com nomes diferentes.
+## Banco de dados e dependências
 
-Manter separação entre:
+Use Prisma como ORM padrão e versione alterações estruturais por migrations. Antes de alterar o banco, inspecione schema e migrations, relacionamentos, chaves estrangeiras, unicidade, índices, nullability, defaults e impacto nos dados e na API. Não apague migrations nem dados para contornar problemas de modelagem; não faça alterações destrutivas sem compreender seus impactos. Use SQL parametrizado quando necessário e adequado; Prisma não elimina a necessidade de considerar o comportamento do PostgreSQL.
 
-* apresentação;
-* estado da interface;
-* comunicação com API;
-* validação;
-* regras que pertencem ao backend.
+Antes de adicionar dependências, verifique se a stack ou uma biblioteca já presente resolve o problema e avalie manutenção e compatibilidade. Não adicione dependências por conveniência.
 
-Regras críticas de negócio não devem existir exclusivamente no frontend.
+## Testes e verificações
 
-Interfaces devem possuir estados adequados para:
+Novas regras de negócio e alterações relevantes devem ter testes apropriados, incluindo sucesso, falha, autorização e isolamento entre tenants quando aplicável. Prefira testes de comportamento observável, sem acoplamento excessivo à implementação interna.
 
-* carregamento;
-* sucesso;
-* erro;
-* ausência de dados;
-* validação.
+Execute verificações relevantes disponíveis no projeto (testes, lint, typecheck ou build conforme o escopo) e informe na conclusão quais foram executadas, quais passaram e o que não pôde ser verificado. Não considere compilação isolada prova suficiente de correção.
 
----
+## Git e conclusão
 
-## 9. Backend
+Não faça commits automaticamente. Não descarte alterações do usuário nem use comandos destrutivos como `reset`, `checkout` para descartar trabalho ou `clean` sem autorização explícita. Mantenha mudanças logicamente separadas quando possível.
 
-O backend deve utilizar:
-
-* NestJS;
-* TypeScript;
-* REST;
-* Prisma.
-
-Controllers devem permanecer responsáveis principalmente pela camada HTTP.
-
-Regras de negócio devem permanecer em services, use cases ou na camada equivalente adotada pelo projeto.
-
-Não colocar regras de negócio complexas diretamente em controllers.
-
-Validar entradas no backend.
-
-Nunca confiar exclusivamente na validação realizada pelo frontend.
-
-Erros devem ser tratados de maneira consistente.
-
-Toda operação que acessa dados pertencentes a um tenant deve respeitar o contexto do tenant autenticado.
-
----
-
-## 10. Banco de dados
-
-O banco oficial é PostgreSQL.
-
-O acesso ao banco deve utilizar Prisma como ORM.
-
-Alterações estruturais devem ser versionadas através de migrations.
-
-Não realizar alterações destrutivas sem verificar impactos.
-
-Não excluir dados apenas para resolver problemas de modelagem.
-
-Verificar:
-
-* relacionamentos;
-* foreign keys;
-* unique constraints;
-* índices;
-* nullable;
-* defaults;
-* isolamento entre tenants.
-
-SQL continua fazendo parte do conhecimento necessário do projeto, mesmo quando Prisma for utilizado.
-
----
-
-## 11. Segurança
-
-Nunca armazenar senhas em texto puro.
-
-Utilizar Argon2id para armazenamento de senhas.
-
-Nunca colocar:
-
-* senhas;
-* tokens;
-* chaves privadas;
-* API keys;
-* credenciais
-
-diretamente no código ou no Git.
-
-Utilizar variáveis de ambiente para segredos.
-
-Nunca registrar credenciais em logs.
-
-Autorização deve ser verificada no backend.
-
-O frontend não deve ser considerado uma camada de segurança.
-
-Falhas de autorização cross-tenant devem ser tratadas como problemas críticos.
-
----
-
-## 12. Autenticação e Autorização
-
-A autenticação deve utilizar:
-
-* credenciais (email + senha);
-* access token JWT (15 min, contém apenas sub + tenantId);
-* refresh token stateful (string aleatória, hash SHA-256 no banco, cookie HttpOnly);
-* sessão persistida no banco (tabela Session).
-
-Após autenticar, o usuário seleciona explicitamente o Tenant. A Session é criada durante a seleção.
-
-O sistema utiliza controle de acesso baseado em papéis (RBAC):
-
-* Papéis iniciais: ADMIN, VETERINARIAN, RECEPTIONIST.
-* Roles são globais e definidas pelo sistema.
-* Um usuário pode ter múltiplos papéis no mesmo Tenant.
-* Permissions são granulares por recurso + ação (ex: ANIMAL_CREATE).
-* Permissions não ficam no JWT — são consultadas no backend com cache.
-
-Platform Admin é representado pelo campo `User.isPlatformAdmin`. Não há tabela `PlatformAdmin`.
-
-Consultar `docs/architecture.md` e `docs/domain-model.md` para detalhes completos.
-
-Um usuário não deve obter acesso a um tenant simplesmente por conhecer ou fornecer seu identificador.
-
----
-
-## 13. Testes
-
-Novas regras de negócio devem possuir testes apropriados.
-
-Alterações importantes devem ser verificadas com:
-
-* testes unitários;
-* testes de API;
-* testes end-to-end quando aplicável.
-
-Testes devem incluir isolamento entre tenants nas funcionalidades que acessam dados tenant-specific.
-
-Uma funcionalidade não deve ser considerada concluída apenas porque o código compila.
-
----
-
-## 14. Dependências
-
-Antes de adicionar uma dependência:
-
-1. verificar se a funcionalidade já pode ser implementada com a stack existente;
-2. avaliar manutenção e compatibilidade;
-3. verificar se uma biblioteca existente no projeto já resolve o problema.
-
-Não adicionar bibliotecas apenas por conveniência.
-
----
-
-## 15. Git
-
-Não realizar commits automaticamente.
-
-Não executar comandos destrutivos sem necessidade.
-
-Não apagar alterações realizadas pelo usuário.
-
-Não utilizar reset, checkout destrutivo, clean ou comandos equivalentes para descartar trabalho sem autorização explícita.
-
-Cada alteração deve permanecer logicamente separada quando possível.
-
----
-
-## 16. Conclusão de tarefas
-
-Antes de concluir uma tarefa:
-
-1. verificar os arquivos alterados;
-2. verificar possíveis regressões;
-3. executar testes relevantes;
-4. executar lint quando disponível;
-5. executar typecheck quando disponível;
-6. executar build quando relevante.
-
-Na resposta final, informar objetivamente:
-
-* o que foi alterado;
-* quais testes foram executados;
-* quais verificações passaram;
-* quais problemas permaneceram.
-
----
-
-## 17. Regra fundamental para uso de IA
-
-O agente pode propor soluções técnicas, implementar código e analisar alternativas.
-
-O agente não deve definir sozinho regras de negócio importantes.
-
-Quando houver mais de uma interpretação válida de um requisito, preservar a ambiguidade e solicitar uma definição no contexto da tarefa, em vez de incorporar uma decisão arbitrária ao código.
-
-A prioridade é manter o sistema coerente com os requisitos definidos pelos responsáveis pelo projeto.
-
+Antes de concluir, revise os arquivos alterados e possíveis regressões. Na resposta, resuma o que mudou, verificações executadas e problemas restantes.

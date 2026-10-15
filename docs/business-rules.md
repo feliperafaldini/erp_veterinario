@@ -65,6 +65,12 @@ Este documento registra exclusivamente regras de negócio já definidas pelo res
 * Roles possuem múltiplas Permissions.
 * Um User recebe Permissions através das Roles associadas ao seu UserTenant.
 
+### Permissões previstas sem endpoint
+
+* `ANIMAL_MARK_DECEASED` — permissão prevista, ainda sem endpoint implementado.
+* `MEDICATION_UPDATE` — permissão prevista, ainda sem endpoint implementado.
+* Os atores autorizados (Roles) para essas duas permissões ainda precisam ser definidos e documentados; o mapeamento existente no seed é provisório.
+
 ---
 
 ## Platform Admin
