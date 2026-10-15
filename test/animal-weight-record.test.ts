@@ -350,7 +350,7 @@ describe('ANIMAL_WEIGHT_RECORDS', () => {
         .expect(401);
     });
 
-    it('should return 403 without ANIMAL_UPDATE permission', async () => {
+    it('should return 403 without WEIGHT_CREATE permission', async () => {
       const prisma = getPrisma(app);
 
       const user = await registerUser(app, {
@@ -498,7 +498,7 @@ describe('ANIMAL_WEIGHT_RECORDS', () => {
         .expect(401);
     });
 
-    it('should return 403 without ANIMAL_READ permission', async () => {
+    it('should return 403 without WEIGHT_READ permission', async () => {
       const prisma = getPrisma(app);
 
       const user = await registerUser(app, {

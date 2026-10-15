@@ -26,7 +26,7 @@ export class DiagnosisController {
   constructor(private readonly diagnosisService: DiagnosisService) {}
 
   @Get('consultations/:consultationId/diagnoses')
-  @RequirePermissions('ANIMAL_READ')
+  @RequirePermissions('DIAGNOSIS_READ')
   findByConsultation(
     @TenantId() tenantId: string,
     @Param() params: FindDiagnosesByConsultationParams,
@@ -38,7 +38,7 @@ export class DiagnosisController {
   }
 
   @Post('consultations/:consultationId/diagnoses')
-  @RequirePermissions('ANIMAL_UPDATE')
+  @RequirePermissions('DIAGNOSIS_CREATE')
   create(
     @TenantId() tenantId: string,
     @Param() params: FindDiagnosesByConsultationParams,
@@ -51,7 +51,7 @@ export class DiagnosisController {
   }
 
   @Get('diagnoses/:id')
-  @RequirePermissions('ANIMAL_READ')
+  @RequirePermissions('DIAGNOSIS_READ')
   findOne(
     @TenantId() tenantId: string,
     @Param() params: FindDiagnosisParams,
@@ -60,7 +60,7 @@ export class DiagnosisController {
   }
 
   @Patch('diagnoses/:id')
-  @RequirePermissions('ANIMAL_UPDATE')
+  @RequirePermissions('DIAGNOSIS_UPDATE')
   update(
     @TenantId() tenantId: string,
     @Param() params: FindDiagnosisParams,
@@ -70,7 +70,7 @@ export class DiagnosisController {
   }
 
   @Patch('diagnoses/:id/deactivate')
-  @RequirePermissions('ANIMAL_UPDATE')
+  @RequirePermissions('DIAGNOSIS_UPDATE')
   deactivate(
     @TenantId() tenantId: string,
     @Param() params: FindDiagnosisParams,

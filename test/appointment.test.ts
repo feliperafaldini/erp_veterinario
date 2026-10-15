@@ -360,7 +360,7 @@ describe('APPOINTMENTS', () => {
         .expect(401);
     });
 
-    it('should return 403 without ANIMAL_UPDATE permission', async () => {
+    it('should return 403 without APPOINTMENT_CREATE permission', async () => {
       const prisma = getPrisma(app);
 
       const user = await registerUser(app, {
@@ -469,7 +469,7 @@ describe('APPOINTMENTS', () => {
         .expect(401);
     });
 
-    it('should return 403 without ANIMAL_READ permission', async () => {
+    it('should return 403 without APPOINTMENT_READ permission', async () => {
       const prisma = getPrisma(app);
 
       const user = await registerUser(app, {
@@ -666,6 +666,40 @@ describe('APPOINTMENTS', () => {
         .set('Authorization', `Bearer ${user.accessToken}`)
         .send({ status: 'INVALID_STATUS' })
         .expect(400);
+    });
+
+    it('should return 403 without APPOINTMENT_UPDATE permission', async () => {
+      const prisma = getPrisma(app);
+
+      const user = await registerUser(app, {
+        email: 'admin@test.com',
+        password: 'password123',
+      });
+
+      const animal = await createAnimal(user);
+      const vet = await createVeterinarian(user);
+      const appointment = await createAppointment(
+        user,
+        animal.animal.id,
+        vet.id,
+      );
+
+      const userTenant = await prisma.userTenant.findFirst({
+        where: {
+          userId: user.userId,
+          tenantId: user.tenantId,
+        },
+      });
+
+      await prisma.userTenantRole.deleteMany({
+        where: { userTenantId: userTenant!.id },
+      });
+
+      await request(app.getHttpServer())
+        .patch(`/api/appointments/${appointment.id}`)
+        .set('Authorization', `Bearer ${user.accessToken}`)
+        .send({ status: 'IN_PROGRESS' })
+        .expect(403);
     });
   });
 

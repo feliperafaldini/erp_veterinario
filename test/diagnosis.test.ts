@@ -350,7 +350,7 @@ describe('DIAGNOSIS', () => {
         .expect(401);
     });
 
-    it('should return 403 without ANIMAL_UPDATE permission', async () => {
+    it('should return 403 without DIAGNOSIS_CREATE permission', async () => {
       const prisma = getPrisma(app);
 
       const user = await registerUser(app, {
@@ -507,7 +507,7 @@ describe('DIAGNOSIS', () => {
         .expect(401);
     });
 
-    it('should return 403 without ANIMAL_READ permission', async () => {
+    it('should return 403 without DIAGNOSIS_READ permission', async () => {
       const prisma = getPrisma(app);
 
       const user = await registerUser(app, {
@@ -624,7 +624,7 @@ describe('DIAGNOSIS', () => {
         .expect(401);
     });
 
-    it('should return 403 without ANIMAL_READ permission', async () => {
+    it('should return 403 without DIAGNOSIS_READ permission', async () => {
       const prisma = getPrisma(app);
 
       const user = await registerUser(app, {
@@ -782,7 +782,7 @@ describe('DIAGNOSIS', () => {
         .expect(401);
     });
 
-    it('should return 403 without ANIMAL_UPDATE permission', async () => {
+    it('should return 403 without DIAGNOSIS_UPDATE permission', async () => {
       const prisma = getPrisma(app);
 
       const user = await registerUser(app, {
@@ -927,7 +927,7 @@ describe('DIAGNOSIS', () => {
         .expect(401);
     });
 
-    it('should return 403 without ANIMAL_UPDATE permission', async () => {
+    it('should return 403 without DIAGNOSIS_UPDATE permission', async () => {
       const prisma = getPrisma(app);
 
       const user = await registerUser(app, {

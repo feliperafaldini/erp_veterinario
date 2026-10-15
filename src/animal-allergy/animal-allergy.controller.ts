@@ -14,7 +14,7 @@ export class AnimalAllergyController {
   constructor(private readonly animalAllergyService: AnimalAllergyService) {}
 
   @Get()
-  @RequirePermissions('ANIMAL_READ')
+  @RequirePermissions('ALLERGY_READ')
   findAll(
     @TenantId() tenantId: string,
     @Param() params: FindAnimalParams,
@@ -23,7 +23,7 @@ export class AnimalAllergyController {
   }
 
   @Post()
-  @RequirePermissions('ANIMAL_UPDATE')
+  @RequirePermissions('ALLERGY_CREATE')
   create(
     @TenantId() tenantId: string,
     @UserId() userId: string,
