@@ -36,21 +36,28 @@
      - Verificar se isActive = true
      - Verificar senha com Argon2id
      - Buscar todos os UserTenant com status = 'active' para aquele User
-   Saída: { user: { id, name, email }, tenants: [{ id, name, logoUrl }] }
+   Saída: { user: { id, name, email },
+            tenants: [{ id, name, logoUrl }],
+            selectionToken }
+
+   `selectionToken` é um JWT de curta duração com as claims
+   `{ sub, purpose: 'tenant-selection' }`, emitido exclusivamente para o
+   passo 2. Como não tem `tenantId`, não é um access token e é rejeitado
+   pelo `JwtAuthGuard`.
 
 2. POST /api/auth/select-tenant
-   Entrada: { tenantId }
+   Entrada: header Authorization: Bearer <selectionToken>
+            corpo { tenantId }
    Processo:
+     - Validar o token de seleção (assinatura e purpose) e derivar o userId
      - Verificar que o User possui UserTenant ativo com aquele Tenant
      - Criar Session no banco (refresh token hash, tenantId, userAgent, ipAddress)
      - Gerar access token JWT com { sub: userId, tenantId, iat, exp }
-   Saída: { accessToken, refreshToken }
+   Saída: { accessToken } + cookie HttpOnly refresh_token
 
-   > **Discrepância registrada:** a implementação atual envia também `userId`
-   > no corpo da requisição, sem autenticação prévia neste passo
-   > (`src/auth/dto/select-tenant.dto.ts`). Como o usuário deve provar a
-   > identidade na seleção do tenant ainda não está definido; a regra acima
-   > não foi alterada.
+   O userId não é aceito no corpo: a identidade vem do token emitido no
+   passo 1 ou no onboarding
+   (`src/auth/guards/selection-token.guard.ts`).
 
 3. POST /api/auth/refresh
    Entrada: refresh token (via HttpOnly cookie)
@@ -58,6 +65,8 @@
      - Buscar Session por refreshTokenHash (SHA-256)
      - Verificar que Session não está revogada
      - Verificar que Session não expirou
+     - Verificar que User.isActive e que UserTenant.status = ACTIVE;
+       caso contrário, revogar a sessão e responder 401
      - Gerar novo access token com mesmo tenantId
    Saída: { accessToken }
 
@@ -69,7 +78,7 @@
    Saída: 204 No Content
 ```
 
-**Nota:** A Session é criada apenas no passo 2 (select-tenant), não no passo 1 (login). O login retorna a lista de tenants disponíveis. O access token e o refresh token são emitidos somente após a seleção do tenant.
+**Nota:** A Session é criada apenas no passo 2 (select-tenant), não no passo 1 (login). O login retorna a lista de tenants disponíveis e o token de seleção. O access token e o refresh token são emitidos somente após a seleção do tenant.
 
 ### Onboarding (Criação de Conta + Tenant)
 
@@ -81,7 +90,7 @@ Processo:
   - Criar Tenant
   - Criar UserTenant com status = 'active'
   - Criar UserTenantRole com roleId = ADMIN
-Saída: { user, tenant }
+Saída: { user, tenant, selectionToken }
 ```
 
 ### Convites
@@ -146,11 +155,11 @@ Saída: { user, tenant }
 | Suspensão de UserTenant | Marcar sessões daquele tenant como `revokedAt = now()` |
 | Revogação de UserTenant | Marcar sessões daquele tenant como `revokedAt = now()` |
 
-> **Implementação atual:** apenas o logout marca `revokedAt`. Não existem
-> endpoints para desativar um User nem para alterar o status de um UserTenant,
-> e o `refresh` verifica apenas `revokedAt`, `expiresAt` e
-> `User.isActive` — **não** verifica `UserTenant.status`
-> (`src/auth/auth.service.ts`).
+> **Implementação atual:** o logout marca `revokedAt`, e o `refresh` também
+> revoga a sessão (respondendo 401) quando `UserTenant.status` deixou de ser
+> `ACTIVE`. Ainda não existem endpoints para desativar um User nem para
+> alterar o status de um UserTenant, então nada dispara esse caminho por
+> enquanto (`src/auth/auth.service.ts`).
 
 ### Validação de Sessão
 
@@ -158,8 +167,10 @@ A cada request com refresh token:
 1. Buscar Session por `refreshTokenHash` (SHA-256 do token recebido).
 2. Verificar `revokedAt IS NULL`.
 3. Verificar `expiresAt > now()`.
-4. Se válido: gerar novo access token.
-5. Se inválido: retornar 401.
+4. Verificar `User.isActive` e `UserTenant.status = ACTIVE` para o par
+   `(userId, tenantId)` da sessão; se falhar, revogar a sessão e responder 401.
+5. Se válido: gerar novo access token.
+6. Se inválido: retornar 401.
 
 ---
 
@@ -181,6 +192,26 @@ A cada request com refresh token:
 * Duração: 15 minutos por padrão (`JWT_EXPIRATION`, em segundos; default 900).
 * Assinado com chave secreta armazenada em variável de ambiente.
 * O access token é independente da tabela Session — validação é feita pela assinatura JWT. A tabela Session é usada apenas para refresh e revogação.
+
+### Selection Token
+
+```json
+{
+  "sub": "uuid-do-user",
+  "purpose": "tenant-selection",
+  "iat": 1234567890,
+  "exp": 1234568790
+}
+```
+
+* Emitido por `POST /api/auth/register` e `POST /api/auth/login`.
+* É o que prova a identidade em `POST /api/auth/select-tenant`: o `userId` é
+  derivado dele e o corpo aceita apenas `tenantId`.
+* Não tem `tenantId` e carrega a claim `purpose`, por isso é rejeitado pelo
+  `JwtAuthGuard` e não autoriza nenhuma rota de domínio.
+* Mesma duração do access token (`JWT_EXPIRATION`).
+* Em sentido inverso, um access token é rejeitado pelo
+  `SelectionTokenGuard` (`src/auth/guards/selection-token.guard.ts`).
 
 ### Refresh Token
 
@@ -221,8 +252,17 @@ A cada request com refresh token:
 * TTL recomendado: 5 minutos.
 
 > **Implementação atual:** `PermissionsGuard` consulta o banco a cada requisição
-> (`src/auth/guards/permissions.guard.ts`), sem cache. O cache continua sendo
-> o requisito definido; a lacuna está registrada.
+> (`src/auth/guards/permissions.guard.ts`), sem cache. O cache continua sendo o
+> requisito definido; a lacuna está registrada.
+>
+> **Por que ainda não existe:** com TTL de 5 minutos, uma revogação de permissão
+> levaria até 5 minutos para valer, e um cache em memória não é invalidado por
+> alterações feitas fora da aplicação. As verificações de `403` imediato da
+> suíte (roles removidas entre duas requisições) dependem da revogação refletir
+> na hora. Implementar o cache **junto** com a invalidação de `Role` /
+> `RolePermission` — o que pressupõe endpoints de gestão de roles, ainda não
+> existentes. Hoje nenhum endpoint altera roles, então o ganho do cache seria
+> praticamente nulo.
 
 ### Platform Admin
 

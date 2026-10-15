@@ -40,13 +40,13 @@ Consultar `docs/architecture.md` para detalhes do TenantGuard e fluxo de autoriz
 
 ## Autenticação e Sessões
 
-* Registro: `POST /api/auth/register` com dados do usuário e do tenant. Cria User, Tenant, UserTenant ativo e ADMIN. Retorna `{ user, tenant }`.
-* Login: `POST /api/auth/login` com email + senha. Retorna lista de tenants com `id`, `name` e `logoUrl`.
-* Seleção de tenant: `POST /api/auth/select-tenant`. Cria Session e emite tokens.
-  * A implementação atual exige também `userId` no corpo e o endpoint não está autenticado — discrepância registrada em `docs/architecture.md`; não reforce esse formato em trabalho novo.
-* Access token: JWT com `sub`, `tenantId`, `iat`, `exp` (15 min por padrão, `JWT_EXPIRATION`). Não contém roles nem permissions.
+* Registro: `POST /api/auth/register` com dados do usuário e do tenant. Cria User, Tenant, UserTenant ativo e ADMIN. Retorna `{ user, tenant, selectionToken }`.
+* Login: `POST /api/auth/login` com email + senha. Retorna a lista de tenants com `id`, `name` e `logoUrl`, e um `selectionToken`.
+* Seleção de tenant: `POST /api/auth/select-tenant` com header `Authorization: Bearer <selectionToken>` e corpo `{ tenantId }`. Cria Session e emite tokens.
+  * A identidade sai do token (`SelectionTokenGuard`): o corpo não aceita `userId` e o endpoint exige o header. Nunca aceite `userId` vindo do cliente.
+* Access token: JWT com `sub`, `tenantId`, `iat`, `exp` (15 min por padrão, `JWT_EXPIRATION`). Não contém roles nem permissions. Tokens com `purpose` (seleção) ou sem `tenantId` são rejeitados pelo `JwtAuthGuard`.
 * Refresh token: string aleatória, hash SHA-256 no banco, cookie HttpOnly.
-* Refresh: `POST /api/auth/refresh`. Valida Session, emite novo access token.
+* Refresh: `POST /api/auth/refresh`. Valida Session, `User.isActive` e `UserTenant.status`; se o vínculo não estiver ativo, revoga a sessão e responde 401.
 * Logout: `POST /api/auth/logout`. Marca Session como revogada.
 
 A Session é criada apenas durante a seleção do Tenant, não durante o login.
