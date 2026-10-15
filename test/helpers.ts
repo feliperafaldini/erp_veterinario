@@ -11,6 +11,8 @@ export interface TestUser {
   tenantId: string;
   accessToken: string;
   refreshToken: string;
+  /** Emitido pelo register; dá direito a criar sessão em `tenantId`. */
+  selectionToken: string;
 }
 
 let prismaInstance: PrismaService;
@@ -244,8 +246,8 @@ export async function registerUser(
 
   const selectResponse = await request(app.getHttpServer())
     .post('/api/auth/select-tenant')
+    .set('Authorization', `Bearer ${response.body.selectionToken}`)
     .send({
-      userId: response.body.user.id,
       tenantId: response.body.tenant.id,
     });
 
@@ -254,6 +256,7 @@ export async function registerUser(
     tenantId: response.body.tenant.id,
     accessToken: selectResponse.body.accessToken,
     refreshToken: extractRefreshTokenFromResponse(selectResponse) || '',
+    selectionToken: response.body.selectionToken,
   };
 }
 
