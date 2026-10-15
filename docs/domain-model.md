@@ -2,13 +2,15 @@
 
 ## Visão Geral
 
-O modelo de domínio é composto por entidades organizadas em três camadas:
+O modelo de domínio é composto por entidades organizadas em cinco grupos temáticos:
 
 1. **Identidade e Autorização** — User, Tenant, UserTenant, UserTenantRole, Session, Role, Permission, RolePermission
 2. **Domínio Veterinário — Identidades Globais** — Veterinarian, Specialty, VeterinarianSpecialty, TenantVeterinarian, TutorIdentity, Animal, Species, Breed
 3. **Domínio Veterinário — Cadastros por Clínica** — Tutor, TutorPhone, TutorAddress, TutorEmergencyContact, TenantAnimal, AnimalTutor
-4. **Domínio Veterinário — Dados Compartilhados** — AnimalWeightRecord, AnimalAllergy, AnimalMedication, AnimalVaccination
-5. **Domínio Veterinário — Catálogos** — Allergy, Medication, Vaccine
+4. **Domínio Veterinário — Dados Compartilhados e Catálogos** — AnimalWeightRecord, AnimalAllergy, AnimalMedication, AnimalVaccination, Allergy, Medication, Vaccine
+5. **Domínio Veterinário — Atendimentos Clínicos** — Appointment, Consultation, Diagnosis
+
+Os grupos 1 a 4 correspondem às seções 1 a 4; o grupo 5 está na seção 5.
 
 ---
 
@@ -738,7 +740,121 @@ O modelo de domínio é composto por entidades organizadas em três camadas:
 
 ---
 
-## 5. Resumo de Escopo
+## 5. Atendimentos Clínicos
+
+Registros de agendamento, atendimento e diagnóstico de uma clínica.
+
+> **Situação:** os três models abaixo existem em `prisma/schema.prisma`, têm
+> migrations próprias (`20260917070502_add_appointment`,
+> `20260917173457_add_consultation`, `20260917202208_add_diagnosis`) e são
+> cobertos por controllers, services e testes. Esta seção descreve a
+> **estrutura existente**. As regras de negócio correspondentes — transições de
+> status, efeito dos `onDelete` de tutor e agendamento, e a matriz de
+> permissões `APPOINTMENT_*` / `CONSULTATION_*` / `DIAGNOSIS_*` — **ainda não
+> foram registradas** em `docs/business-rules.md`. Pendência de definição.
+
+### Appointment
+
+**Responsabilidade:** agendamento de um Animal com um veterinário da clínica.
+
+Enum `AppointmentStatus`: `SCHEDULED` (padrão), `IN_PROGRESS`, `COMPLETED`,
+`CANCELLED`.
+
+| Campo | Tipo | Obrigatório | Descrição |
+|---|---|---|---|
+| id | UUID | Sim | Identificador único |
+| tenantId | FK Tenant | Sim | Clínica dona do agendamento |
+| animalId | FK Animal | Sim | Animal agendado |
+| veterinarianId | FK TenantVeterinarian | Sim | Veterinário que atende na clínica |
+| tutorId | FK Tutor | Não | Tutor referenciado no agendamento |
+| scheduledAt | DateTime | Sim | Data e hora agendadas |
+| status | AppointmentStatus | Sim | Padrão `SCHEDULED` |
+| reason | String | Não | Motivo do agendamento |
+| notes | String | Não | Observações |
+| createdAt / updatedAt | DateTime | Sim | Auditoria de escrita |
+
+**Constraints:**
+
+- Índices: `tenantId`, `animalId`, `veterinarianId`, `tutorId`, `scheduledAt`
+- `tenant`, `animal` e `veterinarian` com `onDelete: Cascade`
+- `tutor` com `onDelete: SetNull` — apagar o tutor desvincula o agendamento
+- Relação 1 → N com `Consultation`
+
+**Escopo:** Tenant-scoped
+
+**Nota:** `veterinarianId` referencia `TenantVeterinarian` (o vínculo do
+veterinário com a clínica), não `Veterinarian`.
+
+---
+
+### Consultation
+
+**Responsabilidade:** atendimento clínico, opcionalmente originado de um
+agendamento.
+
+Enum `ConsultationStatus`: `OPEN` (padrão), `COMPLETED`, `CANCELLED`.
+
+| Campo | Tipo | Obrigatório | Descrição |
+|---|---|---|---|
+| id | UUID | Sim | Identificador único |
+| tenantId | FK Tenant | Sim | Clínica dona do atendimento |
+| appointmentId | FK Appointment | Não | Agendamento de origem |
+| animalId | FK Animal | Sim | Animal atendido |
+| veterinarianId | FK TenantVeterinarian | Sim | Veterinário que atendeu |
+| tutorId | FK Tutor | Não | Tutor presente no atendimento |
+| startedAt | DateTime | Sim | Início do atendimento |
+| finishedAt | DateTime | Não | Término do atendimento |
+| status | ConsultationStatus | Sim | Padrão `OPEN` |
+| chiefComplaint | String | Não | Motivo da queixa |
+| anamnesis | String | Não | Anamnese |
+| physicalExam | String | Não | Exame físico |
+| clinicalNotes | String | Não | Observações clínicas |
+| createdAt / updatedAt | DateTime | Sim | Auditoria de escrita |
+
+**Constraints:**
+
+- Índices: `tenantId`, `appointmentId`, `animalId`, `veterinarianId`,
+  `tutorId`, `startedAt`
+- `tenant`, `animal` e `veterinarian` com `onDelete: Cascade`
+- `appointment` e `tutor` com `onDelete: SetNull`
+- Relação 1 → N com `Diagnosis`
+
+**Escopo:** Tenant-scoped
+
+**Nota:** o vínculo com o agendamento é opcional — um atendimento pode ser
+registrado sem agendamento prévio.
+
+---
+
+### Diagnosis
+
+**Responsabilidade:** diagnóstico registrado em um atendimento.
+
+| Campo | Tipo | Obrigatório | Descrição |
+|---|---|---|---|
+| id | UUID | Sim | Identificador único |
+| tenantId | FK Tenant | Sim | Clínica dona do registro |
+| consultationId | FK Consultation | Sim | Atendimento ao qual pertence |
+| animalId | FK Animal | Sim | Animal diagnosticado |
+| veterinarianId | FK TenantVeterinarian | Sim | Veterinário que registrou |
+| description | String | Sim | Descrição do diagnóstico |
+| notes | String | Não | Observações |
+| isActive | Boolean | Sim | Padrão `true` |
+| registeredAt | DateTime | Sim | Data do registro |
+| createdAt / updatedAt | DateTime | Sim | Auditoria de escrita |
+
+**Constraints:**
+
+- Índices: `tenantId`, `consultationId`, `animalId`, `veterinarianId`
+- Todas as FKs com `onDelete: RESTRICT` — não é possível apagar o
+  atendimento, o animal ou o veterinário enquanto houver diagnóstico
+  vinculado
+
+**Escopo:** Tenant-scoped
+
+---
+
+## 6. Resumo de Escopo
 
 | Entidade | Escopo | Justificativa |
 |---|---|---|
@@ -771,10 +887,16 @@ O modelo de domínio é composto por entidades organizadas em três camadas:
 | AnimalMedication | Global | Medicamentos em uso (compartilhado) |
 | Vaccine | Global | Catálogo compartilhado |
 | AnimalVaccination | Global | Vacinas aplicadas (compartilhado) |
+| Appointment | Tenant-scoped | Agendamento é da clínica |
+| Consultation | Tenant-scoped | Atendimento é da clínica |
+| Diagnosis | Tenant-scoped | Diagnóstico é da clínica |
 
 ---
 
-## 6. Diagrama Conceitual
+## 7. Diagrama Conceitual
+
+> Os models `Appointment`, `Consultation` e `Diagnosis` (seção 5) não estão
+> representados neste diagrama.
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
@@ -922,7 +1044,7 @@ O modelo de domínio é composto por entidades organizadas em três camadas:
 
 ---
 
-## 7. Visibilidade entre Clínicas
+## 8. Visibilidade entre Clínicas
 
 ### Compartilhado entre clínicas
 
@@ -939,6 +1061,7 @@ Uma clínica que atende um Animal pode acessar:
 NÃO compartilhado entre clínicas:
 
 - prontuário clínico completo
+- agendamentos de outras clínicas
 - consultas de outras clínicas
 - diagnósticos clínicos privados
 - anotações clínicas privadas
@@ -948,7 +1071,7 @@ Uma clínica pode criar novas informações sobre um Animal sem apagar ou sobres
 
 ---
 
-## 8. Merge de Animal (Especificação Conceitual)
+## 9. Merge de Animal (Especificação Conceitual)
 
 Quando um Animal sem microchip recebe microchip posteriormente e já existe outro Animal global com aquele microchip:
 

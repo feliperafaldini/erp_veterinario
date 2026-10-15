@@ -16,13 +16,16 @@ O sistema utiliza **multi-tenancy**, permitindo que um mesmo usuário possa esta
 
 ## Tecnologias
 
-### Frontend
+### Frontend (planejado)
 
 * React
 * TypeScript
 * Vite
 * Tailwind CSS
 * shadcn/ui
+
+> Ainda não há frontend neste repositório: não existe diretório de frontend nem
+> dependências React em `package.json`. Ver *Status do desenvolvimento*.
 
 ### Backend
 
@@ -50,7 +53,7 @@ O sistema utiliza **multi-tenancy**, permitindo que um mesmo usuário possa esta
 
 * Vitest
 * Supertest
-* Playwright
+* Playwright (planejado — ainda não instalado; não há config nem testes e2e)
 
 ### Infraestrutura
 
@@ -65,7 +68,7 @@ O sistema segue uma arquitetura de três camadas principais:
 
 ```text
 ┌─────────────────────────────┐
-│           Frontend          │
+│    Frontend (planejado)     │
 │      React + TypeScript     │
 │   Vite + Tailwind + shadcn  │
 └──────────────┬──────────────┘
@@ -85,6 +88,9 @@ O sistema segue uma arquitetura de três camadas principais:
 │       Banco relacional      │
 └─────────────────────────────┘
 ```
+
+> O diagrama acima é a arquitetura-alvo. Hoje o que existe implementado é o
+> backend (`/api`) e o banco; o frontend ainda não foi iniciado.
 
 ### Modular Monolith
 
@@ -204,19 +210,42 @@ As permissões são granulares e seguem o formato:
 RESOURCE_ACTION
 ```
 
-Permissões atualmente cadastradas:
+Permissões atualmente cadastradas são **31**, criadas pelo seed
+(`prisma/seed.ts`) e agrupadas por recurso:
 
-```text
-ANIMAL_CREATE
-ANIMAL_READ
-ANIMAL_UPDATE
-ANIMAL_DEACTIVATE
+| Recurso | Permissões |
+| ------ | ---------- |
+| `ANIMAL` | `ANIMAL_CREATE`, `ANIMAL_READ`, `ANIMAL_UPDATE`, `ANIMAL_DEACTIVATE`, `ANIMAL_MARK_DECEASED` |
+| `TUTOR` | `TUTOR_CREATE`, `TUTOR_READ`, `TUTOR_UPDATE`, `TUTOR_DEACTIVATE` |
+| `VETERINARIAN` | `VETERINARIAN_CREATE`, `VETERINARIAN_READ`, `VETERINARIAN_UPDATE`, `VETERINARIAN_DEACTIVATE` |
+| `APPOINTMENT` | `APPOINTMENT_CREATE`, `APPOINTMENT_READ`, `APPOINTMENT_UPDATE` |
+| `CONSULTATION` | `CONSULTATION_CREATE`, `CONSULTATION_READ`, `CONSULTATION_UPDATE` |
+| `DIAGNOSIS` | `DIAGNOSIS_CREATE`, `DIAGNOSIS_READ`, `DIAGNOSIS_UPDATE` |
+| `WEIGHT` | `WEIGHT_CREATE`, `WEIGHT_READ` |
+| `ALLERGY` | `ALLERGY_CREATE`, `ALLERGY_READ` |
+| `MEDICATION` | `MEDICATION_CREATE`, `MEDICATION_READ`, `MEDICATION_UPDATE` |
+| `VACCINATION` | `VACCINATION_CREATE`, `VACCINATION_READ` |
 
-TUTOR_CREATE
-TUTOR_READ
-TUTOR_UPDATE
-TUTOR_DEACTIVATE
-```
+Distribuição por role (`prisma/seed.ts`, matriz role → permissão):
+
+| Recurso           | `ADMIN`                        | `VETERINARIAN`                                | `RECEPTIONIST`          |
+| ----------------- | ------------------------------ | --------------------------------------------- | ----------------------- |
+| `ANIMAL`          | as 5                           | as 5                                          | sem `MARK_DECEASED`     |
+| `TUTOR`           | as 4                           | sem `DEACTIVATE`                              | sem `DEACTIVATE`        |
+| `VETERINARIAN`    | as 4                           | —                                             | —                       |
+| `APPOINTMENT`     | as 3                           | as 3                                          | as 3                    |
+| `CONSULTATION`    | as 3                           | as 3                                          | apenas `READ`           |
+| `DIAGNOSIS`       | as 3                           | as 3                                          | —                       |
+| `WEIGHT`          | as 2                           | as 2                                          | as 2                    |
+| `ALLERGY`         | as 2                           | `CREATE` e `READ`                             | apenas `READ`           |
+| `MEDICATION`      | as 3                           | as 3                                          | apenas `READ`           |
+| `VACCINATION`     | as 2                           | `CREATE` e `READ`                             | apenas `READ`           |
+| **Total**         | **31**                         | **26**                                        | **16**                  |
+
+Duas permissões — `ANIMAL_MARK_DECEASED` e `MEDICATION_UPDATE` — ainda não têm
+endpoint correspondente, e os atores autorizados delas estão pendentes de
+definição (o mapeamento da tabela acima é provisório para as duas). Ver
+`docs/business-rules.md`, seção *Permissões previstas sem endpoint*.
 
 O acesso é verificado no backend por meio de guards.
 
@@ -281,6 +310,10 @@ AnimalMedication
 
 Vaccine
 AnimalVaccination
+
+Appointment
+Consultation
+Diagnosis
 ```
 
 ### Veterinários
@@ -328,7 +361,10 @@ A estrutura atual do repositório é organizada aproximadamente da seguinte form
 
 ```text
 erp_veterinario/
+├── .github/
+│   └── workflows/          # CI (validação, build, migrations, seed, testes)
 ├── .opencode/
+│   ├── agents/             # subagentes docs-auditor, rbac-reviewer, test-writer
 │   └── skills/
 ├── docs/
 ├── prisma/
@@ -336,21 +372,42 @@ erp_veterinario/
 │   ├── schema.prisma
 │   └── seed.ts
 ├── src/
-│   ├── app/
-│   ├── auth/
-│   ├── health/
+│   ├── app/                # AppModule
+│   ├── common/             # filtros e utilitários transversais
+│   ├── health/             # GET /api/health
 │   ├── prisma/
-│   └── test/
-├── .env
+│   ├── test/               # controlador de testes (montado apenas nos testes)
+│   ├── auth/               # login, registro, seleção de tenant, refresh, logout
+│   ├── animals/            # + animal-tutor, animal-allergy, animal-medication,
+│   │                       #   animal-vaccination, animal-weight-record
+│   ├── tutors/
+│   ├── veterinarians/
+│   ├── appointments/
+│   ├── consultations/
+│   ├── diagnosis/
+│   ├── allergies/
+│   ├── medications/
+│   ├── vaccines/
+│   ├── breeds/
+│   ├── species/
+│   └── specialties/
+├── test/                   # suíte Vitest + Supertest
+├── .env                    # local, não versionado
+├── .env.example
 ├── .gitignore
+├── .dockerignore
 ├── AGENTS.md
+├── Dockerfile
+├── docker-compose.yml
 ├── nest-cli.json
 ├── package.json
 ├── tsconfig.json
+├── vitest.config.ts
 └── README.md
 ```
 
-A estrutura será expandida conforme os módulos de domínio forem implementados.
+Os módulos de domínio acima já estão implementados com controller, service,
+permissões e testes. `test/` segue o padrão Vitest + Supertest.
 
 ## Banco de dados
 
@@ -501,7 +558,8 @@ Observações:
   `npm run typecheck`.
 
 O pipeline de CI (`.github/workflows/ci.yml`) executa nesta ordem: validação do
-schema, `typecheck`, build, migrations, seed e suíte completa.
+schema, geração do Prisma Client, `typecheck`, build, migrations, seed e suíte
+completa.
 
 ## Scripts
 
@@ -577,24 +635,36 @@ As skills utilizadas pelo OpenCode ficam em:
 * [x] JWT authentication guard
 * [x] Tenant guard
 * [x] Permission guard
+* [x] RBAC granular: 31 permissões e matriz de 3 roles
+* [x] Módulo de veterinários
+* [x] Módulo de tutores
+* [x] Módulo de animais (inclui tutor, peso, alergias, medicações e vacinas)
+* [x] Agendamentos
+* [x] Consultas
+* [x] Diagnósticos
+* [x] Catálogos globais (espécies, raças, especialidades, alergias, medicamentos e vacinas)
+* [x] Suíte de testes de API (Vitest + Supertest)
+* [x] Pipeline de CI (validação, typecheck, build, migrations, seed e testes)
+* [x] Ambiente local com Docker (Postgres + aplicação)
 
 ### Em desenvolvimento
 
-* [ ] Testes automatizados completos
-* [ ] Módulo de veterinários
-* [ ] Módulo de tutores
-* [ ] Módulo de animais
-* [ ] Frontend React
+* [ ] Frontend React — ainda não existe no repositório
 * [ ] Integração frontend/backend
-* [ ] Dockerização completa da aplicação
+
+### Pendências com escopo indefinido
+
+* [ ] Testes automatizados completos — a suíte de API existe e roda no CI; o
+      critério de "completos" (por exemplo, testes end-to-end com Playwright,
+      ferramenta planejada e ainda não instalada) não está definido
+* [ ] Dockerização completa da aplicação — banco e aplicação já sobem com
+      `docker compose`; o restante do que significa "completa" não está definido
 * [ ] Preparação para deploy local
 
 ### Planejado
 
 * [ ] Gestão clínica
-* [ ] Consultas
 * [ ] Prontuários
-* [ ] Diagnósticos
 * [ ] Prescrições
 * [ ] Relatórios
 * [ ] Funcionalidades administrativas adicionais

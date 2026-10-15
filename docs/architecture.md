@@ -29,16 +29,16 @@
 ### Fluxo de Login
 
 ```
-1. POST /auth/login
+1. POST /api/auth/login
    Entrada: { email, senha }
    Processo:
      - Buscar User por email
      - Verificar se isActive = true
      - Verificar senha com Argon2id
      - Buscar todos os UserTenant com status = 'active' para aquele User
-   Saída: { user: { id, name, email }, tenants: [{ id, name, logo }] }
+   Saída: { user: { id, name, email }, tenants: [{ id, name, logoUrl }] }
 
-2. POST /auth/select-tenant
+2. POST /api/auth/select-tenant
    Entrada: { tenantId }
    Processo:
      - Verificar que o User possui UserTenant ativo com aquele Tenant
@@ -46,7 +46,13 @@
      - Gerar access token JWT com { sub: userId, tenantId, iat, exp }
    Saída: { accessToken, refreshToken }
 
-3. POST /auth/refresh
+   > **Discrepância registrada:** a implementação atual envia também `userId`
+   > no corpo da requisição, sem autenticação prévia neste passo
+   > (`src/auth/dto/select-tenant.dto.ts`). Como o usuário deve provar a
+   > identidade na seleção do tenant ainda não está definido; a regra acima
+   > não foi alterada.
+
+3. POST /api/auth/refresh
    Entrada: refresh token (via HttpOnly cookie)
    Processo:
      - Buscar Session por refreshTokenHash (SHA-256)
@@ -55,7 +61,7 @@
      - Gerar novo access token com mesmo tenantId
    Saída: { accessToken }
 
-4. POST /auth/logout
+4. POST /api/auth/logout
    Entrada: refresh token (via HttpOnly cookie)
    Processo:
      - Buscar Session por refreshTokenHash
@@ -68,20 +74,25 @@
 ### Onboarding (Criação de Conta + Tenant)
 
 ```
-POST /auth/register
+POST /api/auth/register
 Entrada: { name, email, senha, tenantName, ...dados do tenant }
 Processo:
   - Criar User
   - Criar Tenant
   - Criar UserTenant com status = 'active'
   - Criar UserTenantRole com roleId = ADMIN
-Saída: { user, tenant, userTenant }
+Saída: { user, tenant }
 ```
 
 ### Convites
 
+> **Requisito conhecido, ainda sem implementação.** Não existe módulo de
+> convites em `src/`, nem envio de email, e a permissão `USER_MANAGE` citada
+> abaixo não existe no seed (`prisma/seed.ts`) nem em nenhum controller. O
+> fluxo abaixo é o definido para implementação futura.
+
 ```
-POST /tenants/:tenantId/invites
+POST /api/tenants/:tenantId/invites
 Entrada: { email, roles: [roleId1, roleId2] }
 Processo:
   - Verificar que o remetente tem permissão USER_MANAGE no tenant
@@ -91,7 +102,7 @@ Processo:
   - Enviar email com link de convite (token com expiração de 7 dias)
 Saída: 201 Created
 
-POST /auth/accept-invite
+POST /api/auth/accept-invite
 Entrada: { inviteToken }
 Processo:
   - Validar token do convite (não expirado)
@@ -135,6 +146,12 @@ Saída: { user, tenant }
 | Suspensão de UserTenant | Marcar sessões daquele tenant como `revokedAt = now()` |
 | Revogação de UserTenant | Marcar sessões daquele tenant como `revokedAt = now()` |
 
+> **Implementação atual:** apenas o logout marca `revokedAt`. Não existem
+> endpoints para desativar um User nem para alterar o status de um UserTenant,
+> e o `refresh` verifica apenas `revokedAt`, `expiresAt` e
+> `User.isActive` — **não** verifica `UserTenant.status`
+> (`src/auth/auth.service.ts`).
+
 ### Validação de Sessão
 
 A cada request com refresh token:
@@ -161,7 +178,7 @@ A cada request com refresh token:
 
 * Contém apenas: identificador do usuário e identificador do tenant.
 * Não contém: roleId, permissões, dados do user, dados do tenant.
-* Duração: 15 minutos (fixo).
+* Duração: 15 minutos por padrão (`JWT_EXPIRATION`, em segundos; default 900).
 * Assinado com chave secreta armazenada em variável de ambiente.
 * O access token é independente da tabela Session — validação é feita pela assinatura JWT. A tabela Session é usada apenas para refresh e revogação.
 
@@ -203,6 +220,10 @@ A cada request com refresh token:
 * Cache invalidado quando Role ou RolePermission é alterado.
 * TTL recomendado: 5 minutos.
 
+> **Implementação atual:** `PermissionsGuard` consulta o banco a cada requisição
+> (`src/auth/guards/permissions.guard.ts`), sem cache. O cache continua sendo
+> o requisito definido; a lacuna está registrada.
+
 ### Platform Admin
 
 * Representado pelo campo `User.isPlatformAdmin`.
@@ -230,7 +251,8 @@ A cada request com refresh token:
 * Roles são globais e definidas pelo sistema.
 * Um User pode ter múltiplos papéis no mesmo Tenant (via múltiplos UserTenantRole).
 * ADMIN pode ser combinado com VETERINARIAN ou RECEPTIONIST.
-* Roles são atribuídas pelo Admin do tenant via endpoint dedicado.
+* Roles são atribuídas pelo Admin do tenant via endpoint dedicado (ainda não
+  implementado: não existe módulo de usuários nem de roles em `src/`).
 * Roles não podem ser criadas por Tenants — apenas pelo sistema.
 
 ### Herança de Permissões
@@ -259,8 +281,14 @@ Cada permissão é composta por `resource` + `action`:
 | CREATE | Criar novo registro |
 | READ | Visualizar registro |
 | UPDATE | Atualizar registro |
+| DEACTIVATE | Inativar registro sem excluí-lo |
+| MARK_DECEASED | Ação prevista para `ANIMAL`; comportamento ainda não definido (sem endpoint) |
 | DELETE | Remover registro |
 | MANAGE | Gerenciar (operações especiais que não se encaixam em CRUD) |
+
+**Ações em uso hoje** (`prisma/seed.ts`): `CREATE`, `READ`, `UPDATE`,
+`DEACTIVATE` e `MARK_DECEASED`. `DELETE` e `MANAGE` não aparecem em nenhuma
+permissão cadastrada.
 
 ### Regras de Permissions
 
@@ -268,7 +296,8 @@ Cada permissão é composta por `resource` + `action`:
 * Todas as Roles usam o mesmo conjunto de Permissions.
 * Permissions são granulares por recurso + ação.
 * Um Usuário recebe Permissions através das Roles associadas ao seu UserTenant.
-* Permissions não ficam no JWT — são consultadas no backend (com cache).
+* Permissions não ficam no JWT — são consultadas no backend (com cache; ver
+  *Caching de Permissões* — a implementação atual ainda não tem cache).
 
 ---
 
@@ -276,15 +305,20 @@ Cada permissão é composta por `resource` + `action`:
 
 ### TenantGuard
 
-Guard global que:
+Guard que:
+
 1. Extrai `userId` e `tenantId` do JWT.
 2. Valida que o User possui UserTenant ativo com aquele Tenant.
 3. Injeta `tenantId` no request.
 
+Não está registrado como guard global (`APP_GUARD`): depende do
+`JwtAuthGuard` ter preenchido `request.userId`/`request.tenantId`, e por isso é
+aplicado junto com ele em cada controller.
+
 ### Uso em Controllers
 
 ```typescript
-@UseGuards(TenantGuard)
+@UseGuards(JwtAuthGuard, TenantGuard, PermissionsGuard)
 @Controller('animals')
 class AnimalController {
   @Get()
@@ -293,6 +327,8 @@ class AnimalController {
   }
 }
 ```
+
+A ordem é sempre `JwtAuthGuard → TenantGuard → PermissionsGuard`.
 
 ### Uso em Services
 
@@ -312,6 +348,9 @@ async findAll(tenantId: string) {
 * Usam PlatformAdminGuard que verifica `User.isPlatformAdmin`.
 * Podem acessar dados cross-tenant.
 
+> **Requisito conhecido, ainda sem implementação:** não existe
+> `PlatformAdminGuard` em `src/` nem endpoints de Platform Admin.
+
 ---
 
 ## 9. Padrões de Segurança
@@ -325,7 +364,7 @@ async findAll(tenantId: string) {
 
 ### Tokens
 
-* Access token: JWT com expiração fixa de 15 min.
+* Access token: JWT com expiração de 15 min por padrão (`JWT_EXPIRATION`).
 * Refresh token: string aleatória, hash SHA-256 no banco, cookie HttpOnly.
 * Nunca armazenados em localStorage.
 
