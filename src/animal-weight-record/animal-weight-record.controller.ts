@@ -16,7 +16,7 @@ export class AnimalWeightRecordController {
   ) {}
 
   @Get()
-  @RequirePermissions('ANIMAL_READ')
+  @RequirePermissions('ANIMAL_WEIGHT_RECORD_READ')
   findAll(
     @TenantId() tenantId: string,
     @Param() params: FindAnimalParams,
@@ -25,7 +25,7 @@ export class AnimalWeightRecordController {
   }
 
   @Post()
-  @RequirePermissions('ANIMAL_UPDATE')
+  @RequirePermissions('ANIMAL_WEIGHT_RECORD_CREATE')
   create(
     @TenantId() tenantId: string,
     @UserId() userId: string,

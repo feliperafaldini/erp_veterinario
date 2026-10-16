@@ -26,13 +26,13 @@ export class AppointmentController {
   constructor(private readonly appointmentService: AppointmentService) {}
 
   @Get()
-  @RequirePermissions('ANIMAL_READ')
+  @RequirePermissions('APPOINTMENT_READ')
   findAll(@TenantId() tenantId: string) {
     return this.appointmentService.findAll(tenantId);
   }
 
   @Get(':id')
-  @RequirePermissions('ANIMAL_READ')
+  @RequirePermissions('APPOINTMENT_READ')
   findOne(
     @TenantId() tenantId: string,
     @Param() params: FindAppointmentParams,
@@ -41,7 +41,7 @@ export class AppointmentController {
   }
 
   @Post()
-  @RequirePermissions('ANIMAL_UPDATE')
+  @RequirePermissions('APPOINTMENT_CREATE')
   create(
     @TenantId() tenantId: string,
     @UserId() userId: string,
@@ -51,7 +51,7 @@ export class AppointmentController {
   }
 
   @Patch(':id')
-  @RequirePermissions('ANIMAL_UPDATE')
+  @RequirePermissions('APPOINTMENT_UPDATE')
   update(
     @TenantId() tenantId: string,
     @Param() params: FindAppointmentParams,

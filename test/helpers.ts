@@ -107,6 +107,25 @@ export async function seedRolesAndPermissions(
     { key: 'VETERINARIAN_READ', resource: 'VETERINARIAN', action: 'READ' },
     { key: 'VETERINARIAN_UPDATE', resource: 'VETERINARIAN', action: 'UPDATE' },
     { key: 'VETERINARIAN_DEACTIVATE', resource: 'VETERINARIAN', action: 'DEACTIVATE' },
+    // Permissões do domínio clínico (P1-a)
+    { key: 'APPOINTMENT_CREATE', resource: 'APPOINTMENT', action: 'CREATE' },
+    { key: 'APPOINTMENT_READ', resource: 'APPOINTMENT', action: 'READ' },
+    { key: 'APPOINTMENT_UPDATE', resource: 'APPOINTMENT', action: 'UPDATE' },
+    { key: 'CONSULTATION_CREATE', resource: 'CONSULTATION', action: 'CREATE' },
+    { key: 'CONSULTATION_READ', resource: 'CONSULTATION', action: 'READ' },
+    { key: 'CONSULTATION_UPDATE', resource: 'CONSULTATION', action: 'UPDATE' },
+    { key: 'DIAGNOSIS_CREATE', resource: 'DIAGNOSIS', action: 'CREATE' },
+    { key: 'DIAGNOSIS_READ', resource: 'DIAGNOSIS', action: 'READ' },
+    { key: 'DIAGNOSIS_UPDATE', resource: 'DIAGNOSIS', action: 'UPDATE' },
+    { key: 'DIAGNOSIS_DEACTIVATE', resource: 'DIAGNOSIS', action: 'DEACTIVATE' },
+    { key: 'ANIMAL_WEIGHT_RECORD_CREATE', resource: 'ANIMAL_WEIGHT_RECORD', action: 'CREATE' },
+    { key: 'ANIMAL_WEIGHT_RECORD_READ', resource: 'ANIMAL_WEIGHT_RECORD', action: 'READ' },
+    { key: 'ANIMAL_ALLERGY_CREATE', resource: 'ANIMAL_ALLERGY', action: 'CREATE' },
+    { key: 'ANIMAL_ALLERGY_READ', resource: 'ANIMAL_ALLERGY', action: 'READ' },
+    { key: 'ANIMAL_MEDICATION_CREATE', resource: 'ANIMAL_MEDICATION', action: 'CREATE' },
+    { key: 'ANIMAL_MEDICATION_READ', resource: 'ANIMAL_MEDICATION', action: 'READ' },
+    { key: 'ANIMAL_VACCINATION_CREATE', resource: 'ANIMAL_VACCINATION', action: 'CREATE' },
+    { key: 'ANIMAL_VACCINATION_READ', resource: 'ANIMAL_VACCINATION', action: 'READ' },
   ];
 
   for (const perm of permissions) {
@@ -131,6 +150,25 @@ export async function seedRolesAndPermissions(
       'VETERINARIAN_READ',
       'VETERINARIAN_UPDATE',
       'VETERINARIAN_DEACTIVATE',
+      // Domínio clínico (P1-a)
+      'APPOINTMENT_CREATE',
+      'APPOINTMENT_READ',
+      'APPOINTMENT_UPDATE',
+      'CONSULTATION_CREATE',
+      'CONSULTATION_READ',
+      'CONSULTATION_UPDATE',
+      'DIAGNOSIS_CREATE',
+      'DIAGNOSIS_READ',
+      'DIAGNOSIS_UPDATE',
+      'DIAGNOSIS_DEACTIVATE',
+      'ANIMAL_WEIGHT_RECORD_CREATE',
+      'ANIMAL_WEIGHT_RECORD_READ',
+      'ANIMAL_ALLERGY_CREATE',
+      'ANIMAL_ALLERGY_READ',
+      'ANIMAL_MEDICATION_CREATE',
+      'ANIMAL_MEDICATION_READ',
+      'ANIMAL_VACCINATION_CREATE',
+      'ANIMAL_VACCINATION_READ',
     ],
     VETERINARIAN: [
       'ANIMAL_CREATE',
@@ -140,6 +178,25 @@ export async function seedRolesAndPermissions(
       'TUTOR_CREATE',
       'TUTOR_READ',
       'TUTOR_UPDATE',
+      // Domínio clínico (P1-a)
+      'APPOINTMENT_CREATE',
+      'APPOINTMENT_READ',
+      'APPOINTMENT_UPDATE',
+      'CONSULTATION_CREATE',
+      'CONSULTATION_READ',
+      'CONSULTATION_UPDATE',
+      'DIAGNOSIS_CREATE',
+      'DIAGNOSIS_READ',
+      'DIAGNOSIS_UPDATE',
+      'DIAGNOSIS_DEACTIVATE',
+      'ANIMAL_WEIGHT_RECORD_CREATE',
+      'ANIMAL_WEIGHT_RECORD_READ',
+      'ANIMAL_ALLERGY_CREATE',
+      'ANIMAL_ALLERGY_READ',
+      'ANIMAL_MEDICATION_CREATE',
+      'ANIMAL_MEDICATION_READ',
+      'ANIMAL_VACCINATION_CREATE',
+      'ANIMAL_VACCINATION_READ',
     ],
     RECEPTIONIST: [
       'ANIMAL_CREATE',
@@ -149,6 +206,14 @@ export async function seedRolesAndPermissions(
       'TUTOR_CREATE',
       'TUTOR_READ',
       'TUTOR_UPDATE',
+      // Domínio clínico (P1-a): agendamento e leitura de registros clínicos
+      'APPOINTMENT_CREATE',
+      'APPOINTMENT_READ',
+      'APPOINTMENT_UPDATE',
+      'ANIMAL_WEIGHT_RECORD_READ',
+      'ANIMAL_ALLERGY_READ',
+      'ANIMAL_MEDICATION_READ',
+      'ANIMAL_VACCINATION_READ',
     ],
   };
 
@@ -177,6 +242,36 @@ export async function seedRolesAndPermissions(
       });
     }
   }
+}
+
+export async function setUserRole(
+  app: INestApplication,
+  user: { userId: string; tenantId: string },
+  roleName: 'ADMIN' | 'VETERINARIAN' | 'RECEPTIONIST',
+): Promise<void> {
+  const prisma = getPrisma(app);
+
+  const userTenant = await prisma.userTenant.findFirstOrThrow({
+    where: {
+      userId: user.userId,
+      tenantId: user.tenantId,
+    },
+  });
+
+  const role = await prisma.role.findUniqueOrThrow({
+    where: { name: roleName },
+  });
+
+  await prisma.userTenantRole.deleteMany({
+    where: { userTenantId: userTenant.id },
+  });
+
+  await prisma.userTenantRole.create({
+    data: {
+      userTenantId: userTenant.id,
+      roleId: role.id,
+    },
+  });
 }
 
 function generateUniqueCPF(): string {

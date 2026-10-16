@@ -293,6 +293,34 @@ Quando um microchip é posteriormente cadastrado e já pertence a outro Animal:
 
 ---
 
+## Domínio Clínico — Permissões
+
+| Permissão | ADMIN | VETERINARIAN | RECEPTIONIST |
+| --- | :---: | :---: | :---: |
+| APPOINTMENT_CREATE | ✅ | ✅ | ✅ |
+| APPOINTMENT_READ | ✅ | ✅ | ✅ |
+| APPOINTMENT_UPDATE | ✅ | ✅ | ✅ |
+| CONSULTATION_CREATE | ✅ | ✅ | ❌ |
+| CONSULTATION_READ | ✅ | ✅ | ❌ |
+| CONSULTATION_UPDATE | ✅ | ✅ | ❌ |
+| DIAGNOSIS_CREATE | ✅ | ✅ | ❌ |
+| DIAGNOSIS_READ | ✅ | ✅ | ❌ |
+| DIAGNOSIS_UPDATE | ✅ | ✅ | ❌ |
+| DIAGNOSIS_DEACTIVATE | ✅ | ✅ | ❌ |
+| ANIMAL_WEIGHT_RECORD_CREATE | ✅ | ✅ | ❌ |
+| ANIMAL_WEIGHT_RECORD_READ | ✅ | ✅ | ✅ |
+| ANIMAL_ALLERGY_CREATE | ✅ | ✅ | ❌ |
+| ANIMAL_ALLERGY_READ | ✅ | ✅ | ✅ |
+| ANIMAL_MEDICATION_CREATE | ✅ | ✅ | ❌ |
+| ANIMAL_MEDICATION_READ | ✅ | ✅ | ✅ |
+| ANIMAL_VACCINATION_CREATE | ✅ | ✅ | ❌ |
+| ANIMAL_VACCINATION_READ | ✅ | ✅ | ✅ |
+
+* `ANIMAL_UPDATE` continua governando o cadastro do Animal e o vínculo Animal↔Tutor (rotas de `animal-tutor`), que são operações cadastrais.
+* A leitura dos registros clínicos do Animal (peso, alergia, medicação, vacinação) continua liberada para RECEPTIONIST; apenas a escrita foi restrita a ADMIN e VETERINARIAN.
+
+---
+
 ## Espécie
 
 * Species é entidade global e dinâmica.

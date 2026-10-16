@@ -360,7 +360,7 @@ describe('APPOINTMENTS', () => {
         .expect(401);
     });
 
-    it('should return 403 without ANIMAL_UPDATE permission', async () => {
+    it('should return 403 without APPOINTMENT_CREATE permission', async () => {
       const prisma = getPrisma(app);
 
       const user = await registerUser(app, {
@@ -469,7 +469,7 @@ describe('APPOINTMENTS', () => {
         .expect(401);
     });
 
-    it('should return 403 without ANIMAL_READ permission', async () => {
+    it('should return 403 without APPOINTMENT_READ permission', async () => {
       const prisma = getPrisma(app);
 
       const user = await registerUser(app, {

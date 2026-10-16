@@ -16,7 +16,7 @@ export class AnimalMedicationController {
   ) {}
 
   @Get()
-  @RequirePermissions('ANIMAL_READ')
+  @RequirePermissions('ANIMAL_MEDICATION_READ')
   findAll(
     @TenantId() tenantId: string,
     @Param() params: FindAnimalParams,
@@ -25,7 +25,7 @@ export class AnimalMedicationController {
   }
 
   @Post()
-  @RequirePermissions('ANIMAL_UPDATE')
+  @RequirePermissions('ANIMAL_MEDICATION_CREATE')
   create(
     @TenantId() tenantId: string,
     @UserId() userId: string,
