@@ -34,6 +34,7 @@ Este documento registra exclusivamente regras de negócio já definidas pelo res
 * Possui um endereço principal com campos separados.
 * Logo é opcional.
 * Tenant possui isActive.
+* CPF e CNPJ do Tenant são armazenados **normalizados** (apenas dígitos), como o documento do Tutor: a unicidade não pode depender da presença de máscara. Documento já cadastrado devolve 409, não erro do banco.
 
 ---
 
@@ -230,7 +231,10 @@ Este documento registra exclusivamente regras de negócio já definidas pelo res
 ## Animal — Vínculo com a Clínica
 
 * Decidido em 2026-10-16: o vínculo Animal↔clínica (`POST /animals/:id/clinic`) é criado por quem tem `ANIMAL_CREATE` no tenant, **sem exigência adicional** de consentimento do tutor ou de vínculo prévio do tutor com a clínica. O comportamento atual é o definido.
-* **Lacuna aberta:** não está definido o que o status INACTIVE do vínculo (`TenantAnimal.status`) deve bloquear. Hoje ele não impede novos registros clínicos (peso, alergia, medicação, vacinação, consulta e agendamento) — os serviços verificam apenas a existência do vínculo, nunca o status.
+* **Status INACTIVE do vínculo** (decidido em 2026-10-16): desativar o vínculo encerra a atuação da clínica sobre aquele Animal e **bloqueia a criação de novos registros clínicos** — peso, alergia, medicação, vacinação, consulta e agendamento — com 400 Bad Request.
+* A **leitura** do histórico continua permitida com o vínculo inativo; a clínica não perde acesso ao que já registrou.
+* A alteração de registros clínicos **já existentes** não é afetada por esta regra: ela vale para novos registros. Se a intenção for bloquear também a alteração, é uma decisão nova.
+* Implementado em 2026-10-16 nos seis serviços clínicos (`verifyActiveAnimalInClinic` na criação, verificação de existência na leitura), coberto por `test/inactive-clinic-link.test.ts`.
 
 ---
 

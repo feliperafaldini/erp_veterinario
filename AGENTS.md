@@ -385,7 +385,7 @@ O sistema utiliza controle de acesso baseado em papéis (RBAC):
 * Roles são globais e definidas pelo sistema.
 * Um usuário pode ter múltiplos papéis no mesmo Tenant.
 * Permissions são granulares por recurso + ação (ex: ANIMAL_CREATE).
-* Permissions não ficam no JWT — são consultadas no backend com cache.
+* Permissions não ficam no JWT — são consultadas no backend a cada request.
 
 Platform Admin é representado pelo campo `User.isPlatformAdmin`. Não há tabela `PlatformAdmin`.
 

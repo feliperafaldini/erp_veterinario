@@ -210,9 +210,8 @@ A cada request com refresh token:
 ### Caching de Permissões
 
 * Permissões são globais e definidas pelo sistema — mudam raramente.
-* Podem ser cacheadas em memória (Map no NestJS) ou Redis.
-* Cache invalidado quando Role ou RolePermission é alterado.
-* TTL recomendado: 5 minutos.
+* **Estado atual: não existe cache.** O `PermissionsGuard` consulta o banco a cada request (`UserTenant` → `UserTenantRole` → `Role` → `RolePermission` → `Permission`).
+* O cache em memória (Map no NestJS) ou Redis, com TTL e invalidação quando Role ou RolePermission muda, continua sendo o objetivo — é otimização de performance, não requisito de segurança.
 
 ### Platform Admin
 
@@ -279,7 +278,7 @@ Cada permissão é composta por `resource` + `action`:
 * Todas as Roles usam o mesmo conjunto de Permissions.
 * Permissions são granulares por recurso + ação.
 * Um Usuário recebe Permissions através das Roles associadas ao seu UserTenant.
-* Permissions não ficam no JWT — são consultadas no backend (com cache).
+* Permissions não ficam no JWT — são consultadas no backend a cada request.
 
 ---
 
@@ -345,11 +344,19 @@ async findAll(tenantId: string) {
 * Nunca registrar: senhas, tokens, refresh tokens, senhas de banco.
 * Registrar: IPs, user agents, timestamps de login/logout.
 
+### Cabeçalhos, CORS e Rate Limiting
+
+* `helmet` aplicado em `main.ts` — cabeçalhos de segurança padrão em todas as respostas.
+* CORS **desabilitado por padrão**: só as origens listadas em `CORS_ORIGINS` (separadas por vírgula) podem chamar a API de outro domínio, com `credentials: true` porque o refresh token trafega em cookie HttpOnly.
+* Rate limiting (`@nestjs/throttler`) nos endpoints de `/api/auth/*`, por IP, com janela e limite configuráveis por `AUTH_THROTTLE_TTL_MS` e `AUTH_THROTTLE_LIMIT`. Estourou: `429 Too Many Requests`. Vale para autenticação; as rotas de domínio não são limitadas.
+* Na suíte de testes o limite é alto (`vitest.config.ts`), porque os testes fazem centenas de chamadas de autenticação do mesmo IP; o comportamento do limite é verificado em `test/auth-throttling.test.ts`, que o sobrescreve com um valor baixo.
+
 ### Validação
 
 * Toda entrada externa deve ser validada no backend.
 * Nunca confiar na validação do frontend.
 * Validar: tipos, formatos, campos obrigatórios, consistência.
+* CPF/CNPJ são normalizados (apenas dígitos) na borda, antes da validação e da consulta de unicidade.
 
 ---
 
