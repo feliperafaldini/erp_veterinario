@@ -97,9 +97,10 @@ describe('JWT', () => {
 
       expect(payload).toHaveProperty('sub');
       expect(payload).toHaveProperty('tenantId');
+      expect(payload).toHaveProperty('sid');
       expect(payload).toHaveProperty('iat');
       expect(payload).toHaveProperty('exp');
-      expect(Object.keys(payload)).toHaveLength(4);
+      expect(Object.keys(payload)).toHaveLength(5);
     });
 
     it('should not contain roles', async () => {

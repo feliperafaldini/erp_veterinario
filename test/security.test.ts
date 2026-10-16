@@ -153,4 +153,49 @@ describe('SECURITY', () => {
       }
     });
   });
+
+  describe('Account and Tenant Status', () => {
+    it('should reject access token of a deactivated user', async () => {
+      const prisma = getPrisma(app);
+
+      const user = await registerUser(app, {
+        email: 'test@test.com',
+        password: 'password123',
+      });
+
+      await request(app.getHttpServer())
+        .get('/api/test/protected')
+        .set('Authorization', `Bearer ${user.accessToken}`)
+        .expect(200);
+
+      await prisma.user.update({
+        where: { id: user.userId },
+        data: { isActive: false },
+      });
+
+      await request(app.getHttpServer())
+        .get('/api/test/protected')
+        .set('Authorization', `Bearer ${user.accessToken}`)
+        .expect(401);
+    });
+
+    it('should reject access token of a deactivated tenant', async () => {
+      const prisma = getPrisma(app);
+
+      const user = await registerUser(app, {
+        email: 'test@test.com',
+        password: 'password123',
+      });
+
+      await prisma.tenant.update({
+        where: { id: user.tenantId },
+        data: { isActive: false },
+      });
+
+      await request(app.getHttpServer())
+        .get('/api/test/protected')
+        .set('Authorization', `Bearer ${user.accessToken}`)
+        .expect(401);
+    });
+  });
 });

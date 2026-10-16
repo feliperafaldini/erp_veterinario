@@ -180,7 +180,7 @@ export class AuthService {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + refreshExpirationDays);
 
-    await this.sessionService.createSession({
+    const session = await this.sessionService.createSession({
       userId,
       tenantId: dto.tenantId,
       refreshToken,
@@ -193,6 +193,7 @@ export class AuthService {
       {
         sub: userId,
         tenantId: dto.tenantId,
+        sid: session.id,
       },
       {
         expiresIn: Number(this.configService.get('JWT_EXPIRATION', 900)),
@@ -229,6 +230,7 @@ export class AuthService {
     const accessToken = this.jwtService.sign({
       sub: session.userId,
       tenantId: session.tenantId,
+      sid: session.id,
     });
 
     await this.sessionService.updateLastAccess(session.id);

@@ -47,10 +47,24 @@ describe('SESSION', () => {
       expect(response.body).toHaveProperty('accessToken');
       expect(response.headers['set-cookie']).toBeDefined();
 
+      const prisma = getPrisma(app);
+      const refreshToken = extractRefreshTokenFromResponse(response)!;
+      const { createHash } = await import('crypto');
+      const refreshTokenHash = createHash('sha256')
+        .update(refreshToken)
+        .digest('hex');
+
+      const session = await prisma.session.findFirst({
+        where: { refreshTokenHash },
+      });
+
+      expect(session).not.toBeNull();
+
       const payload = parseJwtPayload(response.body.accessToken);
       expect(payload.sub).toBe(user.userId);
       expect(payload.tenantId).toBe(user.tenantId);
-      expect(Object.keys(payload)).toHaveLength(4);
+      expect(payload.sid).toBe(session!.id);
+      expect(Object.keys(payload)).toHaveLength(5);
     });
 
     it('should reject tenant user does not belong to', async () => {
@@ -170,6 +184,28 @@ describe('SESSION', () => {
   });
 
   describe('POST /auth/logout', () => {
+    it('should reject access token after logout', async () => {
+      const user = await registerUser(app, {
+        email: 'test@test.com',
+        password: 'password123',
+      });
+
+      await request(app.getHttpServer())
+        .get('/api/test/protected')
+        .set('Authorization', `Bearer ${user.accessToken}`)
+        .expect(200);
+
+      await request(app.getHttpServer())
+        .post('/api/auth/logout')
+        .set('Cookie', [`refresh_token=${user.refreshToken}`])
+        .expect(204);
+
+      await request(app.getHttpServer())
+        .get('/api/test/protected')
+        .set('Authorization', `Bearer ${user.accessToken}`)
+        .expect(401);
+    });
+
     it('should revoke session on logout', async () => {
       const user = await registerUser(app, {
         email: 'test@test.com',
