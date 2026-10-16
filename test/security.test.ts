@@ -36,8 +36,8 @@ describe('SECURITY', () => {
 
       const response = await request(app.getHttpServer())
         .post('/api/auth/select-tenant')
+        .set('Authorization', `Bearer ${user.selectionToken}`)
         .send({
-          userId: user.userId,
           tenantId: user.tenantId,
         })
         .expect(201);
@@ -56,8 +56,8 @@ describe('SECURITY', () => {
 
       await request(app.getHttpServer())
         .post('/api/auth/select-tenant')
+        .set('Authorization', `Bearer ${user.selectionToken}`)
         .send({
-          userId: user.userId,
           tenantId: user.tenantId,
         })
         .expect(201);
@@ -78,8 +78,8 @@ describe('SECURITY', () => {
 
       const response = await request(app.getHttpServer())
         .post('/api/auth/select-tenant')
+        .set('Authorization', `Bearer ${user.selectionToken}`)
         .send({
-          userId: user.userId,
           tenantId: user.tenantId,
         })
         .expect(201);
@@ -107,8 +107,8 @@ describe('SECURITY', () => {
 
         const response = await request(app.getHttpServer())
           .post('/api/auth/select-tenant')
+          .set('Authorization', `Bearer ${user.selectionToken}`)
           .send({
-            userId: user.userId,
             tenantId: user.tenantId,
           })
           .expect(201);
@@ -136,8 +136,8 @@ describe('SECURITY', () => {
 
         const response = await request(app.getHttpServer())
           .post('/api/auth/select-tenant')
+          .set('Authorization', `Bearer ${user.selectionToken}`)
           .send({
-            userId: user.userId,
             tenantId: user.tenantId,
           })
           .expect(201);

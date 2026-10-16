@@ -36,11 +36,12 @@
      - Verificar se isActive = true
      - Verificar senha com Argon2id
      - Buscar todos os UserTenant com status = 'active' para aquele User
-   Saída: { user: { id, name, email }, tenants: [{ id, name, logo }] }
+   Saída: { user: { id, name, email }, tenants: [{ id, name, logo }], selectionToken }
 
 2. POST /auth/select-tenant
-   Entrada: { tenantId }
+   Entrada: Authorization: Bearer <selectionToken>, corpo { tenantId }
    Processo:
+     - Validar selectionToken intermediário (scope: tenant-selection, contém apenas sub)
      - Verificar que o User possui UserTenant ativo com aquele Tenant
      - Criar Session no banco (refresh token hash, tenantId, userAgent, ipAddress)
      - Gerar access token JWT com { sub: userId, tenantId, iat, exp }

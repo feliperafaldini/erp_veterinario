@@ -11,6 +11,7 @@ export interface TestUser {
   tenantId: string;
   accessToken: string;
   refreshToken: string;
+  selectionToken: string;
 }
 
 let prismaInstance: PrismaService;
@@ -208,10 +209,19 @@ export async function registerUser(
       tenantDocument: data.tenantDocument || generateUniqueCPF(),
     });
 
+  const loginResponse = await request(app.getHttpServer())
+    .post('/api/auth/login')
+    .send({
+      email: data.email,
+      password: data.password,
+    });
+
+  const selectionToken = loginResponse.body.selectionToken;
+
   const selectResponse = await request(app.getHttpServer())
     .post('/api/auth/select-tenant')
+    .set('Authorization', `Bearer ${selectionToken}`)
     .send({
-      userId: response.body.user.id,
       tenantId: response.body.tenant.id,
     });
 
@@ -220,6 +230,7 @@ export async function registerUser(
     tenantId: response.body.tenant.id,
     accessToken: selectResponse.body.accessToken,
     refreshToken: extractRefreshTokenFromResponse(selectResponse) || '',
+    selectionToken,
   };
 }
 

@@ -8,6 +8,7 @@ import {
   registerUser,
   extractRefreshTokenFromResponse,
   getPrisma,
+  parseJwtPayload,
 } from './helpers';
 
 describe('SESSION', () => {
@@ -37,14 +38,19 @@ describe('SESSION', () => {
 
       const response = await request(app.getHttpServer())
         .post('/api/auth/select-tenant')
+        .set('Authorization', `Bearer ${user.selectionToken}`)
         .send({
-          userId: user.userId,
           tenantId: user.tenantId,
         })
         .expect(201);
 
       expect(response.body).toHaveProperty('accessToken');
       expect(response.headers['set-cookie']).toBeDefined();
+
+      const payload = parseJwtPayload(response.body.accessToken);
+      expect(payload.sub).toBe(user.userId);
+      expect(payload.tenantId).toBe(user.tenantId);
+      expect(Object.keys(payload)).toHaveLength(4);
     });
 
     it('should reject tenant user does not belong to', async () => {
@@ -60,8 +66,8 @@ describe('SESSION', () => {
 
       await request(app.getHttpServer())
         .post('/api/auth/select-tenant')
+        .set('Authorization', `Bearer ${user1.selectionToken}`)
         .send({
-          userId: user1.userId,
           tenantId: user2.tenantId,
         })
         .expect(403);
@@ -77,8 +83,8 @@ describe('SESSION', () => {
 
       const selectResponse = await request(app.getHttpServer())
         .post('/api/auth/select-tenant')
+        .set('Authorization', `Bearer ${user.selectionToken}`)
         .send({
-          userId: user.userId,
           tenantId: user.tenantId,
         });
 
@@ -107,8 +113,8 @@ describe('SESSION', () => {
 
       const selectResponse = await request(app.getHttpServer())
         .post('/api/auth/select-tenant')
+        .set('Authorization', `Bearer ${user.selectionToken}`)
         .send({
-          userId: user.userId,
           tenantId: user.tenantId,
         });
 
@@ -135,8 +141,8 @@ describe('SESSION', () => {
 
       const selectResponse = await request(app.getHttpServer())
         .post('/api/auth/select-tenant')
+        .set('Authorization', `Bearer ${user.selectionToken}`)
         .send({
-          userId: user.userId,
           tenantId: user.tenantId,
         });
 
@@ -172,8 +178,8 @@ describe('SESSION', () => {
 
       const selectResponse = await request(app.getHttpServer())
         .post('/api/auth/select-tenant')
+        .set('Authorization', `Bearer ${user.selectionToken}`)
         .send({
-          userId: user.userId,
           tenantId: user.tenantId,
         });
 

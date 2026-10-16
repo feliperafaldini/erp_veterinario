@@ -150,9 +150,9 @@ Registro
    ↓
 Login
    ↓
-Lista de tenants disponíveis
+Lista de tenants disponíveis + selectionToken
    ↓
-Seleção do tenant
+Seleção do tenant (Authorization: Bearer <selectionToken>)
    ↓
 Criação da sessão
    ↓

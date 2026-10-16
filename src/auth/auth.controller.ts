@@ -6,10 +6,13 @@ import {
   Res,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto, LoginDto, SelectTenantDto } from './dto';
+import { TenantSelectionGuard } from './guards/tenant-selection.guard';
+import { UserId } from './decorators/user-id.decorator';
 
 const REFRESH_TOKEN_COOKIE = 'refresh_token';
 const REFRESH_TOKEN_MAX_AGE_DAYS = 7;
@@ -30,13 +33,15 @@ export class AuthController {
   }
 
   @Post('select-tenant')
+  @UseGuards(TenantSelectionGuard)
   async selectTenant(
+    @UserId() userId: string,
     @Body() dto: SelectTenantDto,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
     const result = await this.authService.selectTenant(
-      dto.userId,
+      userId,
       dto,
       req.headers['user-agent'],
       req.ip,

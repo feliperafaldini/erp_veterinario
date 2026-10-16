@@ -126,6 +126,18 @@ export class AuthService {
       },
     });
 
+    const selectionToken = this.jwtService.sign(
+      {
+        sub: user.id,
+        scope: 'tenant-selection',
+      },
+      {
+        expiresIn: Number(
+          this.configService.get('TENANT_SELECTION_EXPIRATION_SECONDS', 300),
+        ),
+      },
+    );
+
     return {
       user: {
         id: user.id,
@@ -137,6 +149,7 @@ export class AuthService {
         name: ut.tenant.name,
         logoUrl: ut.tenant.logoUrl,
       })),
+      selectionToken,
     };
   }
 
