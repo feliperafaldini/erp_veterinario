@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma';
 import { CreateAppointmentDto, UpdateAppointmentDto } from './dto';
 
@@ -68,7 +72,7 @@ export class AppointmentService {
   }
 
   async create(tenantId: string, userId: string, dto: CreateAppointmentDto) {
-    await this.verifyAnimalInClinic(tenantId, dto.animalId);
+    await this.verifyActiveAnimalInClinic(tenantId, dto.animalId);
     await this.verifyVeterinarianInClinic(tenantId, dto.veterinarianId);
 
     if (dto.tutorId) {
@@ -128,6 +132,21 @@ export class AppointmentService {
     if (!tenantAnimal) {
       throw new NotFoundException(
         'Animal is not associated with this clinic',
+      );
+    }
+
+    return tenantAnimal;
+  }
+
+  private async verifyActiveAnimalInClinic(
+    tenantId: string,
+    animalId: string,
+  ) {
+    const tenantAnimal = await this.verifyAnimalInClinic(tenantId, animalId);
+
+    if (tenantAnimal.status === 'INACTIVE') {
+      throw new BadRequestException(
+        'Animal association with this clinic is inactive',
       );
     }
   }

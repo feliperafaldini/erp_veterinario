@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma';
 import { hideForeignProvenance } from '../common/provenance';
@@ -59,7 +60,7 @@ export class AnimalAllergyService {
     userId: string,
     dto: CreateAnimalAllergyDto,
   ) {
-    await this.verifyAnimalInClinic(tenantId, animalId);
+    await this.verifyActiveAnimalInClinic(tenantId, animalId);
     await this.verifyAllergyExists(dto.allergyId);
 
     try {
@@ -102,6 +103,21 @@ export class AnimalAllergyService {
     if (!tenantAnimal) {
       throw new NotFoundException(
         `Animal is not associated with this clinic`,
+      );
+    }
+
+    return tenantAnimal;
+  }
+
+  private async verifyActiveAnimalInClinic(
+    tenantId: string,
+    animalId: string,
+  ) {
+    const tenantAnimal = await this.verifyAnimalInClinic(tenantId, animalId);
+
+    if (tenantAnimal.status === 'INACTIVE') {
+      throw new BadRequestException(
+        `Animal association with this clinic is inactive`,
       );
     }
   }
