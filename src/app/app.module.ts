@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { PrismaModule } from '../prisma';
 import { HealthModule } from '../health/health.module';
 import { AuthModule } from '../auth/auth.module';
@@ -25,6 +26,20 @@ import { DiagnosisModule } from '../diagnosis';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+    }),
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        errorMessage: 'Too many requests',
+        throttlers: [
+          {
+            name: 'auth',
+            ttl: Number(config.get('AUTH_THROTTLE_TTL_MS', 60000)),
+            limit: Number(config.get('AUTH_THROTTLE_LIMIT', 60)),
+          },
+        ],
+      }),
     }),
     PrismaModule,
     HealthModule,
