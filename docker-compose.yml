@@ -1,0 +1,37 @@
+# Ambiente local do ERP Veterinário.
+#
+#   docker compose up -d      sobe o PostgreSQL
+#   docker compose down       para o serviço (mantém os dados)
+#   docker compose down -v    apaga os dados do banco
+#
+# Apenas o banco é executado em container. O backend roda no host
+# (`npm run start:dev`), conforme o README. A dockerização completa da
+# aplicação ainda é um item pendente do roadmap; quando for implementada,
+# o serviço `app` e seu Dockerfile devem ser adicionados aqui.
+#
+# O banco usa o locale padrão da imagem postgres:16 (en_US.utf8), que mantém
+# a ordem alfabética das listagens da API e esperada pelos testes de ordenação.
+# Não troque para a collation "C": a ordenação de nomes com acento passaria a
+# seguir ordem de bytes e os testes de ordenação deixariam de refletir o
+# comportamento esperado pelo usuário.
+
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-erp_veterinario}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:
