@@ -193,6 +193,40 @@ describe('TUTORS', () => {
         .expect(409);
     });
 
+    it('should store the document normalized and treat the masked form as the same document', async () => {
+      const user = await registerUser(app, {
+        email: 'admin@test.com',
+        password: 'password123',
+      });
+
+      const created = await request(app.getHttpServer())
+        .post('/api/tutors')
+        .set('Authorization', `Bearer ${user.accessToken}`)
+        .send({
+          name: 'João Silva',
+          documentType: 'CPF',
+          documentNumber: '123.456.789-01',
+        })
+        .expect(201);
+
+      expect(created.body.tutorIdentity.documentNumber).toBe('12345678901');
+
+      const otherClinic = await registerUser(app, {
+        email: 'outro@test.com',
+        password: 'password123',
+      });
+
+      await request(app.getHttpServer())
+        .post('/api/tutors')
+        .set('Authorization', `Bearer ${otherClinic.accessToken}`)
+        .send({
+          name: 'João da Silva',
+          documentType: 'CPF',
+          documentNumber: '12345678901',
+        })
+        .expect(409);
+    });
+
     it('should return 400 for invalid data', async () => {
       const user = await registerUser(app, {
         email: 'admin@test.com',

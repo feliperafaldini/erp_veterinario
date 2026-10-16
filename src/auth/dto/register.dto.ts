@@ -5,6 +5,8 @@ import {
   IsString,
   MinLength,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { normalizeDocument } from '../../common/document';
 
 export class RegisterDto {
   @IsString()
@@ -41,6 +43,9 @@ export class RegisterDto {
   @IsEnum(['CPF', 'CNPJ'] as const)
   tenantDocumentType!: 'CPF' | 'CNPJ';
 
+  @Transform(({ value }) =>
+    typeof value === 'string' ? normalizeDocument(value) : value,
+  )
   @IsString()
   @IsNotEmpty()
   tenantDocument!: string;

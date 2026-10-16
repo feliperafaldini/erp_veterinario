@@ -107,6 +107,39 @@ describe('AUTH', () => {
         .expect(409);
     });
 
+    it('should normalize the tenant document and reject the masked duplicate', async () => {
+      const basePayload = {
+        name: 'Test Owner',
+        tenantAddressLine1: '123 Test St',
+        tenantCity: 'São Paulo',
+        tenantState: 'SP',
+        tenantZipCode: '01234-567',
+        tenantDocumentType: 'CNPJ' as const,
+      };
+
+      await request(app.getHttpServer())
+        .post('/api/auth/register')
+        .send({
+          ...basePayload,
+          email: 'owner@test.com',
+          password: 'password123',
+          tenantName: 'Test Clinic',
+          tenantDocument: '12.345.678/0001-90',
+        })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .post('/api/auth/register')
+        .send({
+          ...basePayload,
+          email: 'owner2@test.com',
+          password: 'password456',
+          tenantName: 'Test Clinic 2',
+          tenantDocument: '12345678000190',
+        })
+        .expect(409);
+    });
+
     it('should reject invalid document type', async () => {
       await request(app.getHttpServer())
         .post('/api/auth/register')

@@ -1,5 +1,13 @@
-import { IsEnum, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
+import { Transform } from 'class-transformer';
 import { DocumentType } from '@prisma/client';
+import { normalizeDocument } from '../../common/document';
 
 export class CreateTutorDto {
   @IsString()
@@ -10,6 +18,9 @@ export class CreateTutorDto {
   @IsEnum(DocumentType)
   documentType!: DocumentType;
 
+  @Transform(({ value }) =>
+    typeof value === 'string' ? normalizeDocument(value) : value,
+  )
   @IsString()
   @IsNotEmpty()
   @MaxLength(14)

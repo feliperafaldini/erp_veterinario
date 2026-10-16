@@ -29,6 +29,17 @@ export class AuthService {
       throw new ConflictException('Email already registered');
     }
 
+    const existingTenant = await this.prisma.tenant.findFirst({
+      where:
+        dto.tenantDocumentType === 'CPF'
+          ? { cpf: dto.tenantDocument }
+          : { cnpj: dto.tenantDocument },
+    });
+
+    if (existingTenant) {
+      throw new ConflictException('Tenant document already registered');
+    }
+
     const passwordHash = await argon2.hash(dto.password);
 
     const result = await this.prisma.$transaction(async (tx) => {
