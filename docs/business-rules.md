@@ -197,7 +197,15 @@ apenas este estado da implementação.
 * Tutor pode representar pessoa física ou empresa.
 * TutorIdentity contém: nome, documento (CPF ou CNPJ), tipo do documento.
 * CPF/CNPJ devem ser armazenados normalizados.
+  > **Regra definida:** a normalização remove todos os caracteres não numéricos — o documento é gravado somente com dígitos (`123.456.789-01` → `12345678901`). A validação de dígito verificador e a validação de comprimento específico por tipo (11 para CPF, 14 para CNPJ) **não** fazem parte desta regra. Entrada cuja normalização resulte em vazio é rejeitada.
+  >
+  > Há um teto global de **14 dígitos** após a normalização: um documento que ainda exceda 14 caracteres depois de removida a máscara é rejeitado. Este teto é o `@MaxLength(14)` do DTO aplicado ao valor normalizado — não é validação de comprimento por tipo.
+  >
+  > A normalização ocorre na validação da entrada e novamente no service, de modo que a gravação e a busca usem sempre o valor normalizado. Entrada enviada como número JSON, e não como string, é rejeitada.
 * A unicidade do documento é global (dois tutores não podem ter mesmo CPF/CNPJ).
+  > **Implementado como:** unicidade sobre `TutorIdentity.documentNumber` isolado, somada à unicidade do par `documentType` + `documentNumber`. A unicidade do número isolado é o que torna bem definida a busca por documento, já que o tipo não é validado por comprimento e portanto não desambigua.
+  >
+  > Violações concorrentes de unicidade são tratadas como conflito HTTP 409; o banco é a autoridade em caso de corrida entre requisições simultâneas.
 * Busca global por CPF é permitida para descobrir que existe um registro do Tutor em outra clínica.
 * A clínica NÃO pode visualizar ou editar o cadastro da outra clínica apenas por essa busca.
 * A busca global retorna apenas a informação de que o CPF/CNPJ já existe em outro Tenant, sem expor dados.

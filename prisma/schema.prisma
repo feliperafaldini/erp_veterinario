@@ -213,6 +213,17 @@ model TutorIdentity {
   createdAt      DateTime     @default(now())
   tutors         Tutor[]
 
+  /**
+   * Duas constraints coexistem por decisão:
+   * - `documentNumber` isolado: unicidade GLOBAL do documento
+   *   (docs/business-rules.md, docs/domain-model.md, docs/architecture.md) —
+   *   é ela que torna bem definida a busca por número, sem ambiguidade de
+   *   tipo, já que o código não valida comprimento por tipo.
+   * - Par composto: mantida porque `TutorService` a utiliza em
+   *   `findUnique(documentType_documentNumber)` e porque preserva a semântica
+   *   de "tipo + número" já gravada nas migrations anteriores.
+   */
+  @@unique([documentNumber])
   @@unique([documentType, documentNumber])
   @@map("TutorIdentity")
 }
