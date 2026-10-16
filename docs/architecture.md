@@ -15,6 +15,7 @@
 * O `tenant_id` é extraído do access token JWT e propagado pelo TenantGuard.
 * Services recebem `tenant_id` como parâmetro obrigatório.
 * Plataforma Admin não possui acesso automático a dados clínicos — precisa de UserTenant ativo para cada tenant que deseja acessar.
+* Os identificadores de proveniência de peso, alergia, medicação e vacinação (`tenantId`/`registeredByTenantId` e `recordedBy`/`registeredByUserId`) só são devolvidos pela API ao tenant que registrou o dado; para os demais tenants com vínculo ao Animal, o histórico é compartilhado sem esses identificadores.
 
 ### Consequências
 

@@ -644,7 +644,7 @@ describe('ANIMAL_MEDICATIONS', () => {
         .expect(404);
     });
 
-    it('should record tenantId as provenance of who registered the medication', async () => {
+    it('should share medication history without exposing provenance from other tenants', async () => {
       const userA = await registerUser(app, {
         email: 'adminA@test.com',
         password: 'password123',
@@ -683,16 +683,22 @@ describe('ANIMAL_MEDICATIONS', () => {
       expect(response.body.length).toBe(2);
 
       const recordA = response.body.find(
-        (r: { registeredByTenantId: string }) =>
-          r.registeredByTenantId === userA.tenantId,
+        (r: { medication: { name: string } }) =>
+          r.medication.name === 'Amoxicilina',
       );
       const recordB = response.body.find(
-        (r: { registeredByTenantId: string }) =>
-          r.registeredByTenantId === userB.tenantId,
+        (r: { medication: { name: string } }) =>
+          r.medication.name === 'Meloxicam',
       );
 
       expect(recordA).toBeDefined();
       expect(recordB).toBeDefined();
+
+      expect(recordA.registeredByTenantId).toBe(userA.tenantId);
+      expect(recordA.registeredByUserId).toBe(userA.userId);
+
+      expect(recordB).not.toHaveProperty('registeredByTenantId');
+      expect(recordB).not.toHaveProperty('registeredByUserId');
     });
   });
 

@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma';
+import { hideForeignProvenance } from '../common/provenance';
 import { CreateAnimalWeightRecordDto } from './dto';
 
 const ANIMAL_WEIGHT_RECORD_SELECT = {
@@ -26,11 +27,13 @@ export class AnimalWeightRecordService {
   async findAll(tenantId: string, animalId: string) {
     await this.verifyAnimalInClinic(tenantId, animalId);
 
-    return this.prisma.animalWeightRecord.findMany({
+    const records = await this.prisma.animalWeightRecord.findMany({
       where: { animalId },
       orderBy: { recordedAt: 'desc' },
       select: ANIMAL_WEIGHT_RECORD_SELECT,
     });
+
+    return hideForeignProvenance(records, tenantId, 'tenantId', 'recordedBy');
   }
 
   async create(

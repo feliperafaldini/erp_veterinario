@@ -709,7 +709,7 @@ describe('ANIMAL_WEIGHT_RECORDS', () => {
         .expect(404);
     });
 
-    it('should record tenantId as provenance of who registered the weight', async () => {
+    it('should share weight history without exposing provenance from other tenants', async () => {
       const userA = await registerUser(app, {
         email: 'adminA@test.com',
         password: 'password123',
@@ -755,14 +755,20 @@ describe('ANIMAL_WEIGHT_RECORDS', () => {
       expect(response.body.length).toBe(2);
 
       const recordA = response.body.find(
-        (r: { tenantId: string }) => r.tenantId === userA.tenantId,
+        (r: { weight: string }) => parseFloat(r.weight) === 10,
       );
       const recordB = response.body.find(
-        (r: { tenantId: string }) => r.tenantId === userB.tenantId,
+        (r: { weight: string }) => parseFloat(r.weight) === 12,
       );
 
       expect(recordA).toBeDefined();
       expect(recordB).toBeDefined();
+
+      expect(recordA.tenantId).toBe(userA.tenantId);
+      expect(recordA.recordedBy).toBe(userA.userId);
+
+      expect(recordB).not.toHaveProperty('tenantId');
+      expect(recordB).not.toHaveProperty('recordedBy');
     });
   });
 

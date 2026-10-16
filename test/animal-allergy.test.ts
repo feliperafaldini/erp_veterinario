@@ -602,7 +602,7 @@ describe('ANIMAL_ALLERGIES', () => {
         .expect(404);
     });
 
-    it('should record tenantId as provenance of who registered the allergy', async () => {
+    it('should share allergy history without exposing provenance from other tenants', async () => {
       const userA = await registerUser(app, {
         email: 'adminA@test.com',
         password: 'password123',
@@ -641,16 +641,20 @@ describe('ANIMAL_ALLERGIES', () => {
       expect(response.body.length).toBe(2);
 
       const recordA = response.body.find(
-        (r: { registeredByTenantId: string }) =>
-          r.registeredByTenantId === userA.tenantId,
+        (r: { allergy: { name: string } }) => r.allergy.name === 'Pólen',
       );
       const recordB = response.body.find(
-        (r: { registeredByTenantId: string }) =>
-          r.registeredByTenantId === userB.tenantId,
+        (r: { allergy: { name: string } }) => r.allergy.name === 'Ácaro',
       );
 
       expect(recordA).toBeDefined();
       expect(recordB).toBeDefined();
+
+      expect(recordA.registeredByTenantId).toBe(userA.tenantId);
+      expect(recordA.registeredByUserId).toBe(userA.userId);
+
+      expect(recordB).not.toHaveProperty('registeredByTenantId');
+      expect(recordB).not.toHaveProperty('registeredByUserId');
     });
   });
 

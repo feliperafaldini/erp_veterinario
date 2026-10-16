@@ -4,6 +4,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma';
+import { hideForeignProvenance } from '../common/provenance';
 import { CreateAnimalVaccinationDto } from './dto';
 
 const ANIMAL_VACCINATION_SELECT = {
@@ -39,11 +40,18 @@ export class AnimalVaccinationService {
   async findAll(tenantId: string, animalId: string) {
     await this.verifyAnimalInClinic(tenantId, animalId);
 
-    return this.prisma.animalVaccination.findMany({
+    const records = await this.prisma.animalVaccination.findMany({
       where: { animalId },
       orderBy: { applicationDate: 'desc' },
       select: ANIMAL_VACCINATION_SELECT,
     });
+
+    return hideForeignProvenance(
+      records,
+      tenantId,
+      'registeredByTenantId',
+      'registeredByUserId',
+    );
   }
 
   async create(
