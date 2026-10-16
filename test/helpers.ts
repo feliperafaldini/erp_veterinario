@@ -248,3 +248,24 @@ export function parseJwtPayload(token: string): any {
 
   return JSON.parse(jsonPayload);
 }
+
+/**
+ * Collator usado para reproduzir a ordenação que o PostgreSQL aplica aos
+ * catálogos da API.
+ */
+const nameCollator = new Intl.Collator('pt-BR', { sensitivity: 'variant' });
+
+/**
+ * Ordena nomes na mesma ordem em que a API os devolve.
+ *
+ * A API ordena os catálogos com `ORDER BY name`, ou seja, usando a collation
+ * do banco (en_US.utf8, padrão da imagem postgres:16), que compara nomes de
+ * forma linguística: 'Árabe' é ordenado como 'Arabe' e 'Cão' como 'Cao'.
+ *
+ * O `sort()` padrão do JavaScript compara code units UTF-16 e jogaria nomes
+ * acentuados para o fim da lista ('Árabe' depois de 'Siamês'), o que não é o
+ * que a API devolve. Testes de ordenação de catálogo devem usar esta função.
+ */
+export function sortByName<T extends string>(names: T[]): T[] {
+  return [...names].sort(nameCollator.compare);
+}
