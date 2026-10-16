@@ -16,7 +16,7 @@ export class AnimalVaccinationController {
   ) {}
 
   @Get()
-  @RequirePermissions('ANIMAL_READ')
+  @RequirePermissions('VACCINATION_READ')
   findAll(
     @TenantId() tenantId: string,
     @Param() params: FindAnimalParams,
@@ -25,7 +25,7 @@ export class AnimalVaccinationController {
   }
 
   @Post()
-  @RequirePermissions('ANIMAL_UPDATE')
+  @RequirePermissions('VACCINATION_CREATE')
   create(
     @TenantId() tenantId: string,
     @UserId() userId: string,

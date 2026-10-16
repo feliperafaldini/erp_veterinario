@@ -10,7 +10,7 @@ description: Orienta testes unitários, testes de API e testes end-to-end do ERP
 
 * Vitest
 * Supertest
-* Playwright
+* Playwright (planejado — ainda não instalado; não há config nem testes e2e)
 
 ## Testes unitários
 
@@ -38,6 +38,9 @@ Utilizar Supertest quando necessário para verificar:
 ## Testes end-to-end
 
 Utilizar Playwright para fluxos completos relevantes.
+
+> Playwright ainda não está instalado (ver *Ferramentas*). Enquanto isso, os
+> fluxos completos são cobertos pelos testes de API com Supertest.
 
 Exemplo:
 

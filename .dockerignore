@@ -1,0 +1,20 @@
+# Dependências e artefatos gerados (recriados dentro da imagem).
+node_modules
+dist
+coverage
+tsconfig.tsbuildinfo
+
+# Segredos: o .env é injetado pelo docker-compose, nunca copiado.
+.env
+.env.*
+!.env.example
+
+# Contexto de build desnecessário para a imagem.
+.git
+.github
+.vscode
+.idea
+.opencode
+docs
+test
+*.log

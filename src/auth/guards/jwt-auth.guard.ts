@@ -22,6 +22,16 @@ export class JwtAuthGuard implements CanActivate {
     try {
       const payload = await this.jwtService.verifyAsync(token);
 
+      // Access token é sempre { sub, tenantId }. Tokens com `purpose`
+      // (token de seleção de tenant) ou sem tenantId não autorizam rotas.
+      if (
+        payload.purpose ||
+        typeof payload.tenantId !== 'string' ||
+        !payload.tenantId
+      ) {
+        throw new Error('Not an access token');
+      }
+
       const req = request as any;
       req.userId = payload.sub;
       req.tenantId = payload.tenantId;

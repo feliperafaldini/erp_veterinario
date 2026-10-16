@@ -65,6 +65,55 @@ Este documento registra exclusivamente regras de negócio já definidas pelo res
 * Roles possuem múltiplas Permissions.
 * Um User recebe Permissions através das Roles associadas ao seu UserTenant.
 
+### Matriz implementada no seed (estado atual da implementação)
+
+> Esta subseção registra **o que já está no banco**, gerado por
+> `prisma/seed.ts` e espelhado em `test/helpers.ts`. A regra de negócio que
+> sustenta o mapeamento — em especial das 22 permissões além de `ANIMAL_*` e
+> `TUTOR_*` — **ainda não foi registrada neste documento**. Não trate a tabela
+> abaixo como regra definida enquanto essa pendência existir.
+
+**Permissões cadastradas (31):**
+
+| Recurso | Permissões |
+|---|---|
+| `ANIMAL` | `ANIMAL_CREATE`, `ANIMAL_READ`, `ANIMAL_UPDATE`, `ANIMAL_DEACTIVATE`, `ANIMAL_MARK_DECEASED` |
+| `TUTOR` | `TUTOR_CREATE`, `TUTOR_READ`, `TUTOR_UPDATE`, `TUTOR_DEACTIVATE` |
+| `VETERINARIAN` | `VETERINARIAN_CREATE`, `VETERINARIAN_READ`, `VETERINARIAN_UPDATE`, `VETERINARIAN_DEACTIVATE` |
+| `APPOINTMENT` | `APPOINTMENT_CREATE`, `APPOINTMENT_READ`, `APPOINTMENT_UPDATE` |
+| `CONSULTATION` | `CONSULTATION_CREATE`, `CONSULTATION_READ`, `CONSULTATION_UPDATE` |
+| `DIAGNOSIS` | `DIAGNOSIS_CREATE`, `DIAGNOSIS_READ`, `DIAGNOSIS_UPDATE` |
+| `WEIGHT` | `WEIGHT_CREATE`, `WEIGHT_READ` |
+| `ALLERGY` | `ALLERGY_CREATE`, `ALLERGY_READ` |
+| `MEDICATION` | `MEDICATION_CREATE`, `MEDICATION_READ`, `MEDICATION_UPDATE` |
+| `VACCINATION` | `VACCINATION_CREATE`, `VACCINATION_READ` |
+
+**Matriz role → permissão:**
+
+| Recurso | `ADMIN` | `VETERINARIAN` | `RECEPTIONIST` |
+|---|---|---|---|
+| `ANIMAL` | as 5 | as 5 | sem `MARK_DECEASED` |
+| `TUTOR` | as 4 | sem `DEACTIVATE` | sem `DEACTIVATE` |
+| `VETERINARIAN` | as 4 | — | — |
+| `APPOINTMENT` | as 3 | as 3 | as 3 |
+| `CONSULTATION` | as 3 | as 3 | apenas `READ` |
+| `DIAGNOSIS` | as 3 | as 3 | — |
+| `WEIGHT` | as 2 | as 2 | as 2 |
+| `ALLERGY` | as 2 | `CREATE`, `READ` | apenas `READ` |
+| `MEDICATION` | as 3 | as 3 | apenas `READ` |
+| `VACCINATION` | as 2 | `CREATE`, `READ` | apenas `READ` |
+| **Total** | **31** | **26** | **16** |
+
+Os mapeamentos de `TUTOR` e `ANIMAL` já estão documentados nas seções
+correspondentes deste documento. Para os demais recursos, o que existe hoje é
+apenas este estado da implementação.
+
+### Permissões previstas sem endpoint
+
+* `ANIMAL_MARK_DECEASED` — permissão prevista, ainda sem endpoint implementado.
+* `MEDICATION_UPDATE` — permissão prevista, ainda sem endpoint implementado.
+* Os atores autorizados (Roles) para essas duas permissões ainda precisam ser definidos e documentados; o mapeamento existente no seed é provisório.
+
 ---
 
 ## Platform Admin
@@ -87,7 +136,9 @@ Este documento registra exclusivamente regras de negócio já definidas pelo res
 * A Session é criada durante a seleção do Tenant, não durante o login.
 * Access token contém apenas userId, tenantId, iat e exp.
 * Access token não contém role nem permissions.
-* Access token expira em 15 minutos (fixo).
+* Access token expira em 15 minutos (900 segundos). A variável `JWT_EXPIRATION`
+  permite ajustar a duração por ambiente; o valor padrão corresponde aos 15
+  minutos definidos.
 * Access token é validado pela assinatura JWT, não consultando a tabela Session.
 * Refresh token é stateful.
 * Refresh token é uma string aleatória e armazenado apenas como hash SHA-256.
@@ -121,6 +172,13 @@ Este documento registra exclusivamente regras de negócio já definidas pelo res
 * Informações profissionais gerais pertencem a Veterinarian.
 * Informações específicas da atuação pertencem ao vínculo Veterinarian ↔ Tenant.
 * O vínculo pode conter ativo/inativo, horários, função e especialidade exercida naquela clínica.
+  > **Discrepância registrada:** `TenantVeterinarian` não possui campo de
+  > especialidade (`joinedAt`, `isActive`, `schedule`, `room`, `function`,
+  > `notes` — `prisma/schema.prisma`). Especialidades são globais e ligadas a
+  > `Veterinarian` por `VeterinarianSpecialty`, e `docs/domain-model.md` também
+  > não lista especialidade no vínculo. Confirmar se a regra acima se refere ao
+  > campo `function` ou a um vínculo de especialidade por clínica que ainda não
+  > existe.
 * Veterinarian.name é o nome profissional, distinto de User.name.
 
 ---
@@ -139,7 +197,15 @@ Este documento registra exclusivamente regras de negócio já definidas pelo res
 * Tutor pode representar pessoa física ou empresa.
 * TutorIdentity contém: nome, documento (CPF ou CNPJ), tipo do documento.
 * CPF/CNPJ devem ser armazenados normalizados.
+  > **Regra definida:** a normalização remove todos os caracteres não numéricos — o documento é gravado somente com dígitos (`123.456.789-01` → `12345678901`). A validação de dígito verificador e a validação de comprimento específico por tipo (11 para CPF, 14 para CNPJ) **não** fazem parte desta regra. Entrada cuja normalização resulte em vazio é rejeitada.
+  >
+  > Há um teto global de **14 dígitos** após a normalização: um documento que ainda exceda 14 caracteres depois de removida a máscara é rejeitado. Este teto é o `@MaxLength(14)` do DTO aplicado ao valor normalizado — não é validação de comprimento por tipo.
+  >
+  > A normalização ocorre na validação da entrada e novamente no service, de modo que a gravação e a busca usem sempre o valor normalizado. Entrada enviada como número JSON, e não como string, é rejeitada.
 * A unicidade do documento é global (dois tutores não podem ter mesmo CPF/CNPJ).
+  > **Implementado como:** unicidade sobre `TutorIdentity.documentNumber` isolado, somada à unicidade do par `documentType` + `documentNumber`. A unicidade do número isolado é o que torna bem definida a busca por documento, já que o tipo não é validado por comprimento e portanto não desambigua.
+  >
+  > Violações concorrentes de unicidade são tratadas como conflito HTTP 409; o banco é a autoridade em caso de corrida entre requisições simultâneas.
 * Busca global por CPF é permitida para descobrir que existe um registro do Tutor em outra clínica.
 * A clínica NÃO pode visualizar ou editar o cadastro da outra clínica apenas por essa busca.
 * A busca global retorna apenas a informação de que o CPF/CNPJ já existe em outro Tenant, sem expor dados.
@@ -152,6 +218,10 @@ Este documento registra exclusivamente regras de negócio já definidas pelo res
 ## Tutor — Dados por Clínica
 
 * Email: exatamente um por cadastro de clínica.
+  > **Discrepância registrada:** `Tutor.email` é opcional no schema
+  > (`prisma/schema.prisma`) e `docs/domain-model.md` o marca como não
+  > obrigatório. O código segue o domain-model. Prevalece "exatamente um" ou
+  > "opcional"? Definição pendente — nada foi alterado no código.
 * Múltiplos telefones permitidos.
 * Um dos telefones pode ser principal.
 * Múltiplos endereços permitidos.
@@ -298,6 +368,10 @@ Quando um microchip é posteriormente cadastrado e já pertence a outro Animal:
 * Species é entidade global e dinâmica.
 * Não usar enum ou lista fixa de espécies.
 * Quando uma espécie válida é cadastrada por um usuário autorizado, ela passa a ficar disponível para uso posteriormente.
+  > **Discrepância registrada:** `SpeciesController` só tem endpoints de leitura
+  > (GET); não existe `SPECIES_CREATE` nem endpoint de criação de espécie.
+  > Espécies e raças hoje entram apenas pelo seed. A regra acima continua valendo
+  > e a criação está pendente de implementação.
 * Nomes/valores devem ser padronizados.
 * Animal referencia Species.
 

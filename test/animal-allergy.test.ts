@@ -336,7 +336,7 @@ describe('ANIMAL_ALLERGIES', () => {
         .expect(401);
     });
 
-    it('should return 403 without ANIMAL_UPDATE permission', async () => {
+    it('should return 403 without ALLERGY_CREATE permission', async () => {
       const prisma = getPrisma(app);
 
       const user = await registerUser(app, {
@@ -475,7 +475,7 @@ describe('ANIMAL_ALLERGIES', () => {
         .expect(401);
     });
 
-    it('should return 403 without ANIMAL_READ permission', async () => {
+    it('should return 403 without ALLERGY_READ permission', async () => {
       const prisma = getPrisma(app);
 
       const user = await registerUser(app, {

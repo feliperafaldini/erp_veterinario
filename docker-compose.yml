@@ -1,0 +1,62 @@
+# Ambiente local do ERP Veterinário.
+#
+#   docker compose up -d      sobe o banco e a aplicação
+#   docker compose down       para os serviços (mantém os dados)
+#   docker compose down -v    apaga os dados do banco
+#
+# O banco usa o locale padrão da imagem postgres:16 (en_US.utf8), que mantém
+# a ordem alfabética das listagens da API e esperada pelos testes de ordenação.
+# Não troque para a collation "C": a ordenação de nomes com acento passaria a
+# seguir ordem de bytes e os testes de ordenação deixariam de refletir o
+# comportamento esperado pelo usuário.
+
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-erp_veterinario}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Host `db` (nome do serviço), não localhost: dentro da rede do compose.
+      DATABASE_URL: postgresql://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-erp_veterinario}?schema=public
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET precisa estar definido no .env}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-900}
+      REFRESH_TOKEN_EXPIRATION_DAYS: ${REFRESH_TOKEN_EXPIRATION_DAYS:-7}
+      PORT: 3000
+    ports:
+      - "${PORT:-3000}:3000"
+    # Migrations idempotentes + seed idempotente antes de subir o processo.
+    command: sh -c "npx prisma migrate deploy && npx prisma db seed && node dist/main.js"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:3000/api/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
+volumes:
+  pgdata:

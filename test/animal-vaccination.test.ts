@@ -367,7 +367,7 @@ describe('ANIMAL_VACCINATIONS', () => {
         .expect(401);
     });
 
-    it('should return 403 without ANIMAL_UPDATE permission', async () => {
+    it('should return 403 without VACCINATION_CREATE permission', async () => {
       const prisma = getPrisma(app);
 
       const user = await registerUser(app, {
@@ -513,7 +513,7 @@ describe('ANIMAL_VACCINATIONS', () => {
         .expect(401);
     });
 
-    it('should return 403 without ANIMAL_READ permission', async () => {
+    it('should return 403 without VACCINATION_READ permission', async () => {
       const prisma = getPrisma(app);
 
       const user = await registerUser(app, {

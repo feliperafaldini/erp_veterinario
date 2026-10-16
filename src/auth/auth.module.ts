@@ -7,6 +7,7 @@ import { SessionService } from './session.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { TenantGuard } from './guards/tenant.guard';
 import { PermissionsGuard } from './guards/permissions.guard';
+import { SelectionTokenGuard } from './guards/selection-token.guard';
 
 @Module({
   imports: [
@@ -23,7 +24,14 @@ import { PermissionsGuard } from './guards/permissions.guard';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, SessionService, JwtAuthGuard, TenantGuard, PermissionsGuard],
+  providers: [
+    AuthService,
+    SessionService,
+    JwtAuthGuard,
+    TenantGuard,
+    PermissionsGuard,
+    SelectionTokenGuard,
+  ],
   exports: [JwtAuthGuard, TenantGuard, PermissionsGuard, JwtModule],
 })
 export class AuthModule {}

@@ -9,28 +9,29 @@ const prisma = new PrismaClient();
 const ROLES = ["ADMIN", "VETERINARIAN", "RECEPTIONIST"] as const;
 
 // ============================================================
-// Permissions — apenas as definidas na documentação
+// Permissions — definidas nas decisões do projeto (consolidação de RBAC)
 // ============================================================
 
-// business-rules.md:
-//   ANIMAL_CREATE: ADMIN, VETERINARIAN, RECEPTIONIST
-//   ANIMAL_UPDATE: ADMIN, VETERINARIAN, RECEPTIONIST
-//   ANIMAL_DEACTIVATE: ADMIN, VETERINARIAN, RECEPTIONIST
-//   TUTOR_CREATE: ADMIN, VETERINARIAN, RECEPTIONIST
-//   TUTOR_UPDATE: ADMIN, VETERINARIAN, RECEPTIONIST
-//   TUTOR_DEACTIVATE: ADMIN
+// Lista aprovada de permissões granulares por recurso + ação.
+// business-rules.md define o mapeamento de ANIMAL/TUTOR.
+// O mapeamento das permissões novas (APPOINTMENT, CONSULTATION,
+// DIAGNOSIS, WEIGHT, ALLERGY, MEDICATION, VACCINATION e a ação
+// nova de ANIMAL) foi definido em decisão do projeto ("proposta
+// clínica"), registrado no ROLE_PERMISSIONS abaixo.
 //
-// architecture.md actions padrão: CREATE, READ, UPDATE, DELETE, MANAGE
-// READ é implícito para todos os recursos que possuem CREATE/UPDATE.
-//
-// USER_MANAGE é mencionada em architecture.md (convites) mas sem
-// mapeamento Role↔Permission definido. Não incluída no seed.
+// Observações da decisão:
+//   ANIMAL_MARK_DECEASED NÃO é concedida a RECEPTIONIST.
+//   ANIMAL_MARK_DECEASED e MEDICATION_UPDATE são permissões
+//   previstas, ainda sem endpoint; os atores autorizados para
+//   essas duas ainda precisam ser definidos e documentados em
+//   docs/business-rules.md.
 
 const PERMISSIONS = [
   { key: "ANIMAL_CREATE", resource: "ANIMAL", action: "CREATE" },
   { key: "ANIMAL_READ", resource: "ANIMAL", action: "READ" },
   { key: "ANIMAL_UPDATE", resource: "ANIMAL", action: "UPDATE" },
   { key: "ANIMAL_DEACTIVATE", resource: "ANIMAL", action: "DEACTIVATE" },
+  { key: "ANIMAL_MARK_DECEASED", resource: "ANIMAL", action: "MARK_DECEASED" },
   { key: "TUTOR_CREATE", resource: "TUTOR", action: "CREATE" },
   { key: "TUTOR_READ", resource: "TUTOR", action: "READ" },
   { key: "TUTOR_UPDATE", resource: "TUTOR", action: "UPDATE" },
@@ -39,6 +40,24 @@ const PERMISSIONS = [
   { key: "VETERINARIAN_READ", resource: "VETERINARIAN", action: "READ" },
   { key: "VETERINARIAN_UPDATE", resource: "VETERINARIAN", action: "UPDATE" },
   { key: "VETERINARIAN_DEACTIVATE", resource: "VETERINARIAN", action: "DEACTIVATE" },
+  { key: "APPOINTMENT_CREATE", resource: "APPOINTMENT", action: "CREATE" },
+  { key: "APPOINTMENT_READ", resource: "APPOINTMENT", action: "READ" },
+  { key: "APPOINTMENT_UPDATE", resource: "APPOINTMENT", action: "UPDATE" },
+  { key: "CONSULTATION_CREATE", resource: "CONSULTATION", action: "CREATE" },
+  { key: "CONSULTATION_READ", resource: "CONSULTATION", action: "READ" },
+  { key: "CONSULTATION_UPDATE", resource: "CONSULTATION", action: "UPDATE" },
+  { key: "DIAGNOSIS_CREATE", resource: "DIAGNOSIS", action: "CREATE" },
+  { key: "DIAGNOSIS_READ", resource: "DIAGNOSIS", action: "READ" },
+  { key: "DIAGNOSIS_UPDATE", resource: "DIAGNOSIS", action: "UPDATE" },
+  { key: "WEIGHT_CREATE", resource: "WEIGHT", action: "CREATE" },
+  { key: "WEIGHT_READ", resource: "WEIGHT", action: "READ" },
+  { key: "ALLERGY_CREATE", resource: "ALLERGY", action: "CREATE" },
+  { key: "ALLERGY_READ", resource: "ALLERGY", action: "READ" },
+  { key: "MEDICATION_CREATE", resource: "MEDICATION", action: "CREATE" },
+  { key: "MEDICATION_READ", resource: "MEDICATION", action: "READ" },
+  { key: "MEDICATION_UPDATE", resource: "MEDICATION", action: "UPDATE" },
+  { key: "VACCINATION_CREATE", resource: "VACCINATION", action: "CREATE" },
+  { key: "VACCINATION_READ", resource: "VACCINATION", action: "READ" },
 ] as const;
 
 // ============================================================
@@ -50,31 +69,51 @@ const PERMISSIONS = [
 //   Tutor DEACTIVATE: ADMIN
 //   Animal CREATE/UPDATE/DEACTIVATE: ADMIN, VETERINARIAN, RECEPTIONIST
 //
-// READ é implícito para quem possui CREATE ou UPDATE no mesmo recurso.
+// Proposta clínica (decisão de RBAC):
+//   ADMIN                    → todas as permissions.
+//   VETERINARIAN             → ANIMAL (inclui MARK_DECEASED), TUTOR (sem
+//                              DEACTIVATE), APPOINTMENT, CONSULTATION,
+//                              DIAGNOSIS, WEIGHT/ALLERGY/VACCINATION
+//                              (CREATE/READ), MEDICATION (CREATE/READ/
+//                              UPDATE). Sem VETERINARIAN_*.
+//   RECEPTIONIST             → ANIMAL, TUTOR (sem DEACTIVATE), APPOINTMENT,
+//                              CONSULTATION_READ, WEIGHT (CREATE/READ),
+//                              ALLERGY/MEDICATION/VACCINATION (READ).
+//                              SEM ANIMAL_MARK_DECEASED e sem DIAGNOSIS.
+//
+// ANIMAL_MARK_DECEASED e MEDICATION_UPDATE são permissões previstas,
+// ainda sem endpoint; o mapeamento acima é provisório até a definição
+// e documentação dos atores autorizados.
 
 const ROLE_PERMISSIONS: Record<string, string[]> = {
-  ADMIN: [
-    "ANIMAL_CREATE",
-    "ANIMAL_READ",
-    "ANIMAL_UPDATE",
-    "ANIMAL_DEACTIVATE",
-    "TUTOR_CREATE",
-    "TUTOR_READ",
-    "TUTOR_UPDATE",
-    "TUTOR_DEACTIVATE",
-    "VETERINARIAN_CREATE",
-    "VETERINARIAN_READ",
-    "VETERINARIAN_UPDATE",
-    "VETERINARIAN_DEACTIVATE",
-  ],
+  ADMIN: PERMISSIONS.map((perm) => perm.key),
   VETERINARIAN: [
     "ANIMAL_CREATE",
     "ANIMAL_READ",
     "ANIMAL_UPDATE",
     "ANIMAL_DEACTIVATE",
+    "ANIMAL_MARK_DECEASED",
     "TUTOR_CREATE",
     "TUTOR_READ",
     "TUTOR_UPDATE",
+    "APPOINTMENT_CREATE",
+    "APPOINTMENT_READ",
+    "APPOINTMENT_UPDATE",
+    "CONSULTATION_CREATE",
+    "CONSULTATION_READ",
+    "CONSULTATION_UPDATE",
+    "DIAGNOSIS_CREATE",
+    "DIAGNOSIS_READ",
+    "DIAGNOSIS_UPDATE",
+    "WEIGHT_CREATE",
+    "WEIGHT_READ",
+    "ALLERGY_CREATE",
+    "ALLERGY_READ",
+    "MEDICATION_CREATE",
+    "MEDICATION_READ",
+    "MEDICATION_UPDATE",
+    "VACCINATION_CREATE",
+    "VACCINATION_READ",
   ],
   RECEPTIONIST: [
     "ANIMAL_CREATE",
@@ -84,6 +123,15 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "TUTOR_CREATE",
     "TUTOR_READ",
     "TUTOR_UPDATE",
+    "APPOINTMENT_CREATE",
+    "APPOINTMENT_READ",
+    "APPOINTMENT_UPDATE",
+    "CONSULTATION_READ",
+    "WEIGHT_CREATE",
+    "WEIGHT_READ",
+    "ALLERGY_READ",
+    "MEDICATION_READ",
+    "VACCINATION_READ",
   ],
 };
 

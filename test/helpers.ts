@@ -11,6 +11,8 @@ export interface TestUser {
   tenantId: string;
   accessToken: string;
   refreshToken: string;
+  /** Emitido pelo register; dá direito a criar sessão em `tenantId`. */
+  selectionToken: string;
 }
 
 let prismaInstance: PrismaService;
@@ -98,6 +100,7 @@ export async function seedRolesAndPermissions(
     { key: 'ANIMAL_READ', resource: 'ANIMAL', action: 'READ' },
     { key: 'ANIMAL_UPDATE', resource: 'ANIMAL', action: 'UPDATE' },
     { key: 'ANIMAL_DEACTIVATE', resource: 'ANIMAL', action: 'DEACTIVATE' },
+    { key: 'ANIMAL_MARK_DECEASED', resource: 'ANIMAL', action: 'MARK_DECEASED' },
     { key: 'TUTOR_CREATE', resource: 'TUTOR', action: 'CREATE' },
     { key: 'TUTOR_READ', resource: 'TUTOR', action: 'READ' },
     { key: 'TUTOR_UPDATE', resource: 'TUTOR', action: 'UPDATE' },
@@ -106,6 +109,24 @@ export async function seedRolesAndPermissions(
     { key: 'VETERINARIAN_READ', resource: 'VETERINARIAN', action: 'READ' },
     { key: 'VETERINARIAN_UPDATE', resource: 'VETERINARIAN', action: 'UPDATE' },
     { key: 'VETERINARIAN_DEACTIVATE', resource: 'VETERINARIAN', action: 'DEACTIVATE' },
+    { key: 'APPOINTMENT_CREATE', resource: 'APPOINTMENT', action: 'CREATE' },
+    { key: 'APPOINTMENT_READ', resource: 'APPOINTMENT', action: 'READ' },
+    { key: 'APPOINTMENT_UPDATE', resource: 'APPOINTMENT', action: 'UPDATE' },
+    { key: 'CONSULTATION_CREATE', resource: 'CONSULTATION', action: 'CREATE' },
+    { key: 'CONSULTATION_READ', resource: 'CONSULTATION', action: 'READ' },
+    { key: 'CONSULTATION_UPDATE', resource: 'CONSULTATION', action: 'UPDATE' },
+    { key: 'DIAGNOSIS_CREATE', resource: 'DIAGNOSIS', action: 'CREATE' },
+    { key: 'DIAGNOSIS_READ', resource: 'DIAGNOSIS', action: 'READ' },
+    { key: 'DIAGNOSIS_UPDATE', resource: 'DIAGNOSIS', action: 'UPDATE' },
+    { key: 'WEIGHT_CREATE', resource: 'WEIGHT', action: 'CREATE' },
+    { key: 'WEIGHT_READ', resource: 'WEIGHT', action: 'READ' },
+    { key: 'ALLERGY_CREATE', resource: 'ALLERGY', action: 'CREATE' },
+    { key: 'ALLERGY_READ', resource: 'ALLERGY', action: 'READ' },
+    { key: 'MEDICATION_CREATE', resource: 'MEDICATION', action: 'CREATE' },
+    { key: 'MEDICATION_READ', resource: 'MEDICATION', action: 'READ' },
+    { key: 'MEDICATION_UPDATE', resource: 'MEDICATION', action: 'UPDATE' },
+    { key: 'VACCINATION_CREATE', resource: 'VACCINATION', action: 'CREATE' },
+    { key: 'VACCINATION_READ', resource: 'VACCINATION', action: 'READ' },
   ];
 
   for (const perm of permissions) {
@@ -117,28 +138,34 @@ export async function seedRolesAndPermissions(
   }
 
   const rolePermissions: Record<string, string[]> = {
-    ADMIN: [
-      'ANIMAL_CREATE',
-      'ANIMAL_READ',
-      'ANIMAL_UPDATE',
-      'ANIMAL_DEACTIVATE',
-      'TUTOR_CREATE',
-      'TUTOR_READ',
-      'TUTOR_UPDATE',
-      'TUTOR_DEACTIVATE',
-      'VETERINARIAN_CREATE',
-      'VETERINARIAN_READ',
-      'VETERINARIAN_UPDATE',
-      'VETERINARIAN_DEACTIVATE',
-    ],
+    ADMIN: permissions.map((perm) => perm.key),
     VETERINARIAN: [
       'ANIMAL_CREATE',
       'ANIMAL_READ',
       'ANIMAL_UPDATE',
       'ANIMAL_DEACTIVATE',
+      'ANIMAL_MARK_DECEASED',
       'TUTOR_CREATE',
       'TUTOR_READ',
       'TUTOR_UPDATE',
+      'APPOINTMENT_CREATE',
+      'APPOINTMENT_READ',
+      'APPOINTMENT_UPDATE',
+      'CONSULTATION_CREATE',
+      'CONSULTATION_READ',
+      'CONSULTATION_UPDATE',
+      'DIAGNOSIS_CREATE',
+      'DIAGNOSIS_READ',
+      'DIAGNOSIS_UPDATE',
+      'WEIGHT_CREATE',
+      'WEIGHT_READ',
+      'ALLERGY_CREATE',
+      'ALLERGY_READ',
+      'MEDICATION_CREATE',
+      'MEDICATION_READ',
+      'MEDICATION_UPDATE',
+      'VACCINATION_CREATE',
+      'VACCINATION_READ',
     ],
     RECEPTIONIST: [
       'ANIMAL_CREATE',
@@ -148,6 +175,15 @@ export async function seedRolesAndPermissions(
       'TUTOR_CREATE',
       'TUTOR_READ',
       'TUTOR_UPDATE',
+      'APPOINTMENT_CREATE',
+      'APPOINTMENT_READ',
+      'APPOINTMENT_UPDATE',
+      'CONSULTATION_READ',
+      'WEIGHT_CREATE',
+      'WEIGHT_READ',
+      'ALLERGY_READ',
+      'MEDICATION_READ',
+      'VACCINATION_READ',
     ],
   };
 
@@ -210,8 +246,8 @@ export async function registerUser(
 
   const selectResponse = await request(app.getHttpServer())
     .post('/api/auth/select-tenant')
+    .set('Authorization', `Bearer ${response.body.selectionToken}`)
     .send({
-      userId: response.body.user.id,
       tenantId: response.body.tenant.id,
     });
 
@@ -220,6 +256,7 @@ export async function registerUser(
     tenantId: response.body.tenant.id,
     accessToken: selectResponse.body.accessToken,
     refreshToken: extractRefreshTokenFromResponse(selectResponse) || '',
+    selectionToken: response.body.selectionToken,
   };
 }
 
@@ -234,6 +271,20 @@ export function extractRefreshTokenFromResponse(
   );
 
   return refreshCookie?.split(';')[0]?.split('=')[1];
+}
+
+/**
+ * Ordem alfabética esperada pelas listagens ordenadas da API.
+ *
+ * O serviço ordena por `ORDER BY name` no PostgreSQL, ou seja, a ordem
+ * devolvida segue a collation do banco (`en_US.utf8` em docker-compose e CI).
+ * `Array.sort()` sem comparador usa ordem de code points UTF-16 e trata
+ * acentos como caracteres separados, o que diverge da collation; por isso a
+ * comparação usa `Intl.Collator`, que reproduz a ordem alfabética.
+ */
+export function sortedAlphabetically(names: string[]): string[] {
+  const collator = new Intl.Collator('en');
+  return [...names].sort((a, b) => collator.compare(a, b));
 }
 
 export function parseJwtPayload(token: string): any {

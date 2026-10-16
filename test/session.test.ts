@@ -37,8 +37,8 @@ describe('SESSION', () => {
 
       const response = await request(app.getHttpServer())
         .post('/api/auth/select-tenant')
+        .set('Authorization', `Bearer ${user.selectionToken}`)
         .send({
-          userId: user.userId,
           tenantId: user.tenantId,
         })
         .expect(201);
@@ -60,8 +60,8 @@ describe('SESSION', () => {
 
       await request(app.getHttpServer())
         .post('/api/auth/select-tenant')
+        .set('Authorization', `Bearer ${user1.selectionToken}`)
         .send({
-          userId: user1.userId,
           tenantId: user2.tenantId,
         })
         .expect(403);
@@ -77,8 +77,8 @@ describe('SESSION', () => {
 
       const selectResponse = await request(app.getHttpServer())
         .post('/api/auth/select-tenant')
+        .set('Authorization', `Bearer ${user.selectionToken}`)
         .send({
-          userId: user.userId,
           tenantId: user.tenantId,
         });
 
@@ -107,8 +107,8 @@ describe('SESSION', () => {
 
       const selectResponse = await request(app.getHttpServer())
         .post('/api/auth/select-tenant')
+        .set('Authorization', `Bearer ${user.selectionToken}`)
         .send({
-          userId: user.userId,
           tenantId: user.tenantId,
         });
 
@@ -135,8 +135,8 @@ describe('SESSION', () => {
 
       const selectResponse = await request(app.getHttpServer())
         .post('/api/auth/select-tenant')
+        .set('Authorization', `Bearer ${user.selectionToken}`)
         .send({
-          userId: user.userId,
           tenantId: user.tenantId,
         });
 
@@ -161,6 +161,36 @@ describe('SESSION', () => {
         .set('Cookie', [`refresh_token=${refreshToken}`])
         .expect(401);
     });
+
+    it('should reject refresh when the tenant link is no longer active', async () => {
+      const prisma = getPrisma(app);
+
+      const user = await registerUser(app, {
+        email: 'test@test.com',
+        password: 'password123',
+      });
+
+      await prisma.userTenant.updateMany({
+        where: { userId: user.userId, tenantId: user.tenantId },
+        data: { status: 'SUSPENDED' },
+      });
+
+      await request(app.getHttpServer())
+        .post('/api/auth/refresh')
+        .set('Cookie', [`refresh_token=${user.refreshToken}`])
+        .expect(401);
+
+      // A suspensão revoga a sessão: reativar o vínculo não devolve o refresh.
+      await prisma.userTenant.updateMany({
+        where: { userId: user.userId, tenantId: user.tenantId },
+        data: { status: 'ACTIVE' },
+      });
+
+      await request(app.getHttpServer())
+        .post('/api/auth/refresh')
+        .set('Cookie', [`refresh_token=${user.refreshToken}`])
+        .expect(401);
+    });
   });
 
   describe('POST /auth/logout', () => {
@@ -172,8 +202,8 @@ describe('SESSION', () => {
 
       const selectResponse = await request(app.getHttpServer())
         .post('/api/auth/select-tenant')
+        .set('Authorization', `Bearer ${user.selectionToken}`)
         .send({
-          userId: user.userId,
           tenantId: user.tenantId,
         });
 

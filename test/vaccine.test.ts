@@ -7,6 +7,7 @@ import {
   seedRolesAndPermissions,
   registerUser,
   getPrisma,
+  sortedAlphabetically,
 } from './helpers';
 
 describe('VACCINES', () => {
@@ -102,7 +103,7 @@ describe('VACCINES', () => {
         .expect(200);
 
       const names = response.body.map((v: any) => v.name);
-      const sorted = [...names].sort();
+      const sorted = sortedAlphabetically(names);
       expect(names).toEqual(sorted);
     });
 

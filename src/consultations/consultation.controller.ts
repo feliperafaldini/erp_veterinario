@@ -25,13 +25,13 @@ export class ConsultationController {
   constructor(private readonly consultationService: ConsultationService) {}
 
   @Get()
-  @RequirePermissions('ANIMAL_READ')
+  @RequirePermissions('CONSULTATION_READ')
   findAll(@TenantId() tenantId: string) {
     return this.consultationService.findAll(tenantId);
   }
 
   @Get(':id')
-  @RequirePermissions('ANIMAL_READ')
+  @RequirePermissions('CONSULTATION_READ')
   findOne(
     @TenantId() tenantId: string,
     @Param() params: FindConsultationParams,
@@ -40,7 +40,7 @@ export class ConsultationController {
   }
 
   @Post()
-  @RequirePermissions('ANIMAL_UPDATE')
+  @RequirePermissions('CONSULTATION_CREATE')
   create(
     @TenantId() tenantId: string,
     @Body() dto: CreateConsultationDto,
@@ -49,7 +49,7 @@ export class ConsultationController {
   }
 
   @Patch(':id')
-  @RequirePermissions('ANIMAL_UPDATE')
+  @RequirePermissions('CONSULTATION_UPDATE')
   update(
     @TenantId() tenantId: string,
     @Param() params: FindConsultationParams,

@@ -228,6 +228,275 @@ describe('TUTORS', () => {
     });
   });
 
+  describe('POST /api/tutors — document normalization', () => {
+    it('should store a masked CPF as digits only', async () => {
+      const user = await registerUser(app, {
+        email: 'admin@test.com',
+        password: 'password123',
+      });
+
+      const response = await request(app.getHttpServer())
+        .post('/api/tutors')
+        .set('Authorization', `Bearer ${user.accessToken}`)
+        .send({
+          name: 'João Silva',
+          documentType: 'CPF',
+          documentNumber: '123.456.789-01',
+        })
+        .expect(201);
+
+      expect(response.body.tutorIdentity.documentNumber).toBe('12345678901');
+    });
+
+    it('should accept a masked CNPJ that exceeds 14 raw characters', async () => {
+      const user = await registerUser(app, {
+        email: 'admin@test.com',
+        password: 'password123',
+      });
+
+      // '12.345.678/0001-90' tem 18 caracteres, acima do @MaxLength(14).
+      // A normalização para 14 dígitos precisa ocorrer ANTES da validação.
+      const response = await request(app.getHttpServer())
+        .post('/api/tutors')
+        .set('Authorization', `Bearer ${user.accessToken}`)
+        .send({
+          name: 'Empresa Ltda',
+          documentType: 'CNPJ',
+          documentNumber: '12.345.678/0001-90',
+        })
+        .expect(201);
+
+      expect(response.body.tutorIdentity.documentNumber).toBe('12345678000190');
+    });
+
+    it('should not create a second TutorIdentity when the CPF is sent with a mask', async () => {
+      const user = await registerUser(app, {
+        email: 'admin@test.com',
+        password: 'password123',
+      });
+
+      const masked = await request(app.getHttpServer())
+        .post('/api/tutors')
+        .set('Authorization', `Bearer ${user.accessToken}`)
+        .send({
+          name: 'João Silva',
+          documentType: 'CPF',
+          documentNumber: '123.456.789-01',
+        })
+        .expect(201);
+
+      // No mesmo tenant a segunda grafia é uma duplicata legítima: normaliza
+      // para o mesmo documento e o service a rejeita com 409.
+      await request(app.getHttpServer())
+        .post('/api/tutors')
+        .set('Authorization', `Bearer ${user.accessToken}`)
+        .send({
+          name: 'João Silva',
+          documentType: 'CPF',
+          documentNumber: '12345678901',
+        })
+        .expect(409);
+
+      // Regra de identidade global: as duas grafias são o MESMO documento,
+      // então existe uma única TutorIdentity — não duas fragmentadas.
+      const prisma = getPrisma(app);
+      const identities = await prisma.tutorIdentity.findMany({
+        where: { documentNumber: '12345678901' },
+      });
+      expect(identities).toHaveLength(1);
+      expect(identities[0].id).toBe(masked.body.tutorIdentity.id);
+
+      const tutors = await prisma.tutor.findMany({
+        where: { tenantId: user.tenantId },
+      });
+      expect(tutors).toHaveLength(1);
+    });
+
+    it('should share one TutorIdentity across tenants for masked and unmasked CPF', async () => {
+      const clinic1 = await registerUser(app, {
+        email: 'clinic1@test.com',
+        password: 'password123',
+      });
+      const clinic2 = await registerUser(app, {
+        email: 'clinic2@test.com',
+        password: 'password123',
+      });
+
+      const masked = await request(app.getHttpServer())
+        .post('/api/tutors')
+        .set('Authorization', `Bearer ${clinic1.accessToken}`)
+        .send({
+          name: 'João Silva',
+          documentType: 'CPF',
+          documentNumber: '123.456.789-01',
+        })
+        .expect(201);
+
+      const unmasked = await request(app.getHttpServer())
+        .post('/api/tutors')
+        .set('Authorization', `Bearer ${clinic2.accessToken}`)
+        .send({
+          name: 'João Silva',
+          documentType: 'CPF',
+          documentNumber: '12345678901',
+        })
+        .expect(201);
+
+      expect(masked.body.tutorIdentity.id).toBe(unmasked.body.tutorIdentity.id);
+      expect(masked.body.tenantId).not.toBe(unmasked.body.tenantId);
+    });
+
+    it('should return 409 when masked CPF duplicates an unmasked one in the same tenant', async () => {
+      const user = await registerUser(app, {
+        email: 'admin@test.com',
+        password: 'password123',
+      });
+
+      await request(app.getHttpServer())
+        .post('/api/tutors')
+        .set('Authorization', `Bearer ${user.accessToken}`)
+        .send({
+          name: 'João Silva',
+          documentType: 'CPF',
+          documentNumber: '12345678901',
+        })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .post('/api/tutors')
+        .set('Authorization', `Bearer ${user.accessToken}`)
+        .send({
+          name: 'João Silva',
+          documentType: 'CPF',
+          documentNumber: '123.456.789-01',
+        })
+        .expect(409);
+    });
+
+    it('should return 400 when the document normalizes to an empty string', async () => {
+      const user = await registerUser(app, {
+        email: 'admin@test.com',
+        password: 'password123',
+      });
+
+      await request(app.getHttpServer())
+        .post('/api/tutors')
+        .set('Authorization', `Bearer ${user.accessToken}`)
+        .send({
+          name: 'João Silva',
+          documentType: 'CPF',
+          documentNumber: '...',
+        })
+        .expect(400);
+    });
+
+    it('should return 400 when the normalized value still exceeds 14 digits', async () => {
+      const user = await registerUser(app, {
+        email: 'admin@test.com',
+        password: 'password123',
+      });
+
+      // 18 dígitos separados por pontos: normaliza para 18 dígitos.
+      await request(app.getHttpServer())
+        .post('/api/tutors')
+        .set('Authorization', `Bearer ${user.accessToken}`)
+        .send({
+          name: 'João Silva',
+          documentType: 'CPF',
+          documentNumber: '1.2.3.4.5.6.7.8.9.0.1.2.3.4.5.6.7.8',
+        })
+        .expect(400);
+    });
+
+    it('should return 400 when documentNumber is a JSON number, not a string', async () => {
+      const user = await registerUser(app, {
+        email: 'admin@test.com',
+        password: 'password123',
+      });
+
+      // Trava contra regressão: a normalização NÃO pode coagir número em
+      // string, senão este payload deixaria de ser rejeitado.
+      await request(app.getHttpServer())
+        .post('/api/tutors')
+        .set('Authorization', `Bearer ${user.accessToken}`)
+        .send({
+          name: 'João Silva',
+          documentType: 'CPF',
+          documentNumber: 12345678901,
+        })
+        .expect(400);
+    });
+
+    it('should reject the same digits registered under a different document type', async () => {
+      const user = await registerUser(app, {
+        email: 'admin@test.com',
+        password: 'password123',
+      });
+
+      // Mesmos dígitos gravados como CPF: cria a identidade.
+      const asCpf = await request(app.getHttpServer())
+        .post('/api/tutors')
+        .set('Authorization', `Bearer ${user.accessToken}`)
+        .send({
+          name: 'João Silva',
+          documentType: 'CPF',
+          documentNumber: '12345678901',
+        })
+        .expect(201);
+
+      // Mesmos dígitos como CNPJ: o par (tipo, número) difere e seria aceito
+      // pela constraint composta, mas a unicidade GLOBAL sobre documentNumber
+      // isolado recusa — a identidade não se fragmenta por tipo.
+      const asCnpj = await request(app.getHttpServer())
+        .post('/api/tutors')
+        .set('Authorization', `Bearer ${user.accessToken}`)
+        .send({
+          name: 'João Silva',
+          documentType: 'CNPJ',
+          documentNumber: '12345678901',
+        });
+
+      expect(asCnpj.status).toBe(409);
+
+      const prisma = getPrisma(app);
+      const identities = await prisma.tutorIdentity.findMany({
+        where: { documentNumber: '12345678901' },
+      });
+      expect(identities).toHaveLength(1);
+      expect(identities[0].id).toBe(asCpf.body.tutorIdentity.id);
+    });
+
+    it('should return 409 instead of 500 on concurrent creates with the same document', async () => {
+      const user = await registerUser(app, {
+        email: 'admin@test.com',
+        password: 'password123',
+      });
+
+      const payload = {
+        name: 'João Silva',
+        documentType: 'CPF',
+        documentNumber: '987.654.321-00',
+      };
+
+      // Dispara as duas requisições sem aguardar a primeira: se ambas
+      // passarem pelo findUnique antes de qualquer create, o banco é quem
+      // decide — e a resposta precisa ser 409, nunca 500.
+      const [first, second] = await Promise.all([
+        request(app.getHttpServer())
+          .post('/api/tutors')
+          .set('Authorization', `Bearer ${user.accessToken}`)
+          .send(payload),
+        request(app.getHttpServer())
+          .post('/api/tutors')
+          .set('Authorization', `Bearer ${user.accessToken}`)
+          .send(payload),
+      ]);
+
+      const statuses = [first.status, second.status].sort();
+      expect(statuses).toEqual([201, 409]);
+    });
+  });
+
   describe('GET /api/tutors', () => {
     it('should list tutors for authenticated tenant', async () => {
       const user = await registerUser(app, {

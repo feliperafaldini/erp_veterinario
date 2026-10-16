@@ -88,7 +88,24 @@ export class AuthService {
         id: result.tenant.id,
         name: result.tenant.name,
       },
+      selectionToken: this.signSelectionToken(result.user.id),
     };
+  }
+
+  /**
+   * Token de seleção de tenant: emitido no register e no login para que o
+   * cliente escolha em qual tenant criar a Session.
+   *
+   * Carrega apenas `sub` e `purpose`, portanto não serve como access token —
+   * `JwtAuthGuard` rejeita tokens com `purpose` e sem `tenantId`.
+   */
+  private signSelectionToken(userId: string): string {
+    return this.jwtService.sign(
+      { sub: userId, purpose: 'tenant-selection' },
+      {
+        expiresIn: Number(this.configService.get('JWT_EXPIRATION', 900)),
+      },
+    );
   }
 
   async login(dto: LoginDto) {
@@ -137,6 +154,7 @@ export class AuthService {
         name: ut.tenant.name,
         logoUrl: ut.tenant.logoUrl,
       })),
+      selectionToken: this.signSelectionToken(user.id),
     };
   }
 
@@ -211,6 +229,23 @@ export class AuthService {
 
     if (!session.user.isActive) {
       throw new UnauthorizedException('User account is disabled');
+    }
+
+    const userTenant = await this.prisma.userTenant.findUnique({
+      where: {
+        userId_tenantId: {
+          userId: session.userId,
+          tenantId: session.tenantId,
+        },
+      },
+    });
+
+    if (!userTenant || userTenant.status !== 'ACTIVE') {
+      // Regra documentada: a suspensão/revogação do vínculo UserTenant
+      // revoga as sessões daquele tenant (docs/business-rules.md,
+      // docs/architecture.md § Revogação de Sessões).
+      await this.sessionService.revokeSession(refreshToken);
+      throw new UnauthorizedException('Tenant access is no longer active');
     }
 
     const accessToken = this.jwtService.sign({

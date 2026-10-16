@@ -4,8 +4,23 @@ import {
   ConflictException,
   BadRequestException,
 } from '@nestjs/common';
+import { Prisma, DocumentType } from '@prisma/client';
 import { PrismaService } from '../prisma';
-import { DocumentType } from '@prisma/client';
+import { normalizeDocument } from '../common/normalize-document';
+
+/**
+ * Violação de unicidade do Postgres (P2002).
+ *
+ * Preferido ao teste por mensagem (usado em `animal-tutor.service.ts`): o
+ * código de erro é contrato estável do Prisma, enquanto a mensagem varia
+ * com o formato e o idioma do erro reportado.
+ */
+function isUniqueViolation(error: unknown): boolean {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === 'P2002'
+  );
+}
 
 @Injectable()
 export class TutorService {
@@ -22,29 +37,64 @@ export class TutorService {
       notes?: string;
     },
   ) {
+    /**
+     * Normalização defensiva: o DTO já normaliza via `@Transform`, mas este
+     * service também é chamável fora do caminho HTTP. Usar sempre o valor
+     * normalizado no lookup e na escrita, senão a identidade se fragmenta.
+     */
+    const documentNumber = normalizeDocument(data.documentNumber);
+
     let tutorIdentity = await this.prisma.tutorIdentity.findUnique({
       where: {
         documentType_documentNumber: {
           documentType: data.documentType,
-          documentNumber: data.documentNumber,
+          documentNumber,
         },
       },
     });
 
-    if (tutorIdentity) {
-      if (tutorIdentity.name !== data.name) {
-        throw new ConflictException(
-          `A TutorIdentity with this document already exists with a different name`,
-        );
+    if (!tutorIdentity) {
+      // Outra identidade pode ter sido criada entre o `findUnique` e o
+      // `create` (mesmo documento sob outro tipo, ou mesmo par). O banco é a
+      // autoridade; em vez de deixar o P2002 virar 500, tenta localizar a
+      // identidade que venceu e reutiliza.
+      try {
+        tutorIdentity = await this.prisma.tutorIdentity.create({
+          data: {
+            name: data.name,
+            documentType: data.documentType,
+            documentNumber,
+          },
+        });
+      } catch (error: unknown) {
+        if (!isUniqueViolation(error)) {
+          throw error;
+        }
+
+        tutorIdentity = await this.prisma.tutorIdentity.findUnique({
+          where: {
+            documentType_documentNumber: {
+              documentType: data.documentType,
+              documentNumber,
+            },
+          },
+        });
+
+        if (!tutorIdentity) {
+          // Violação em `documentNumber` isolado (mesmo CPF cadastrado sob
+          // tipos diferentes): a constraint global venceu e não há identidade
+          // recuperável por este par. Conflito explícito, nunca 500.
+          throw new ConflictException(
+            `A TutorIdentity with this document already exists`,
+          );
+        }
       }
-    } else {
-      tutorIdentity = await this.prisma.tutorIdentity.create({
-        data: {
-          name: data.name,
-          documentType: data.documentType,
-          documentNumber: data.documentNumber,
-        },
-      });
+    }
+
+    if (tutorIdentity.name !== data.name) {
+      throw new ConflictException(
+        `A TutorIdentity with this document already exists with a different name`,
+      );
     }
 
     const existingInTenant = await this.prisma.tutor.findUnique({
@@ -79,33 +129,59 @@ export class TutorService {
       }
     }
 
-    return this.prisma.tutor.create({
-      data: {
-        tenantId,
-        tutorIdentityId: tutorIdentity.id,
-        email: data.email,
-        additionalInfo: data.additionalInfo,
-        notes: data.notes,
-      },
-      select: {
-        id: true,
-        tenantId: true,
-        email: true,
-        additionalInfo: true,
-        isActive: true,
-        notes: true,
-        createdAt: true,
-        updatedAt: true,
-        tutorIdentity: {
-          select: {
-            id: true,
-            name: true,
-            documentType: true,
-            documentNumber: true,
+    /**
+     * As duas unicidades de `Tutor` (`tenantId_tutorIdentityId` e
+     * `tenantId_email`) já são pré-verificadas acima, mas a verificação e a
+     * escrita não são atômicas: duas requisições simultâneas podem passar
+     * pelas duas leituras e ambas tentar inserir. O banco decide — e a
+     * violação vira 409 com a mensagem correspondente, nunca 500.
+     */
+    try {
+      return await this.prisma.tutor.create({
+        data: {
+          tenantId,
+          tutorIdentityId: tutorIdentity.id,
+          email: data.email,
+          additionalInfo: data.additionalInfo,
+          notes: data.notes,
+        },
+        select: {
+          id: true,
+          tenantId: true,
+          email: true,
+          additionalInfo: true,
+          isActive: true,
+          notes: true,
+          createdAt: true,
+          updatedAt: true,
+          tutorIdentity: {
+            select: {
+              id: true,
+              name: true,
+              documentType: true,
+              documentNumber: true,
+            },
           },
         },
-      },
-    });
+      });
+    } catch (error: unknown) {
+      if (!isUniqueViolation(error)) {
+        throw error;
+      }
+
+      const target = (error as { meta?: { target?: unknown } }).meta?.target;
+      const columns = Array.isArray(target) ? target.map(String) : [];
+
+      if (columns.includes('email')) {
+        throw new ConflictException(
+          `A tutor with this email already exists in this clinic`,
+        );
+      }
+
+      throw new ConflictException(
+        `Tutor with this document is already registered in this clinic`,
+      );
+    }
   }
 
   async findAll(tenantId: string) {
