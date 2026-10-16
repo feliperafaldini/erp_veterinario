@@ -373,7 +373,7 @@ Falhas de autorização cross-tenant devem ser tratadas como problemas críticos
 A autenticação deve utilizar:
 
 * credenciais (email + senha);
-* access token JWT (15 min, contém apenas sub + tenantId);
+* access token JWT (15 min, contém apenas sub + tenantId + sid da sessão);
 * refresh token stateful (string aleatória, hash SHA-256 no banco, cookie HttpOnly);
 * sessão persistida no banco (tabela Session).
 

@@ -12,7 +12,7 @@
 ### Regra de Isolamento
 
 * Toda query que acessa dados de domínio (tutors, animals, appointments, etc.) deve incluir `WHERE tenant_id = ?`.
-* O `tenant_id` é extraído do access token JWT e propagado pelo TenantGuard.
+* O `tenant_id` vem da sessão validada a cada request (JWT + registro em `Session`) e é propagado pelo TenantGuard.
 * Services recebem `tenant_id` como parâmetro obrigatório.
 * Plataforma Admin não possui acesso automático a dados clínicos — precisa de UserTenant ativo para cada tenant que deseja acessar.
 * Os identificadores de proveniência de peso, alergia, medicação e vacinação (`tenantId`/`registeredByTenantId` e `recordedBy`/`registeredByUserId`) só são devolvidos pela API ao tenant que registrou o dado; para os demais tenants com vínculo ao Animal, o histórico é compartilhado sem esses identificadores.
@@ -45,7 +45,7 @@
      - Validar selectionToken intermediário (scope: tenant-selection, contém apenas sub)
      - Verificar que o User possui UserTenant ativo com aquele Tenant
      - Criar Session no banco (refresh token hash, tenantId, userAgent, ipAddress)
-     - Gerar access token JWT com { sub: userId, tenantId, iat, exp }
+     - Gerar access token JWT com { sub: userId, tenantId, sid: session.id, iat, exp }
    Saída: { accessToken, refreshToken }
 
 3. POST /auth/refresh
@@ -54,7 +54,7 @@
      - Buscar Session por refreshTokenHash (SHA-256)
      - Verificar que Session não está revogada
      - Verificar que Session não expirou
-     - Gerar novo access token com mesmo tenantId
+     - Gerar novo access token com mesmo tenantId e mesmo sid
    Saída: { accessToken }
 
 4. POST /auth/logout
@@ -137,6 +137,8 @@ Saída: { user, tenant }
 | Suspensão de UserTenant | Marcar sessões daquele tenant como `revokedAt = now()` |
 | Revogação de UserTenant | Marcar sessões daquele tenant como `revokedAt = now()` |
 
+**Estado da implementação:** hoje apenas o logout escreve `revokedAt`. As demais revogações em massa (desativação de User, suspensão/revogação de UserTenant) ainda não são executadas por nenhum código; o bloqueio correspondente acontece na validação por request (o guard rejeita o token quando `User.isActive` ou `Tenant.isActive` é falso), mas o registro da sessão permanece ativo no banco. Implementar a revogação em massa continua pendente.
+
 ### Validação de Sessão
 
 A cada request com refresh token:
@@ -156,16 +158,18 @@ A cada request com refresh token:
 {
   "sub": "uuid-do-user",
   "tenantId": "uuid-do-tenant",
+  "sid": "uuid-da-session",
   "iat": 1234567890,
   "exp": 1234568790
 }
 ```
 
-* Contém apenas: identificador do usuário e identificador do tenant.
+* Contém apenas: identificador do usuário, identificador do tenant e identificador da sessão.
 * Não contém: roleId, permissões, dados do user, dados do tenant.
 * Duração: 15 minutos (fixo).
 * Assinado com chave secreta armazenada em variável de ambiente.
-* O access token é independente da tabela Session — validação é feita pela assinatura JWT. A tabela Session é usada apenas para refresh e revogação.
+* O access token é válido apenas enquanto a `Session` que o originou estiver válida: a cada request, o guard verifica a assinatura/expiração do JWT e, pelo `sid`, que a sessão não foi revogada, não expirou, e que `User.isActive` e `Tenant.isActive` são verdadeiros. Um access token deixa de funcionar imediatamente após o logout, sem esperar a expiração de 15 minutos.
+* A verificação por request é o que garante o efeito de revogação; a tabela `Session` é usada para refresh, para o vínculo token↔sessão e para a revogação.
 
 ### Refresh Token
 
@@ -181,10 +185,15 @@ A cada request com refresh token:
 ### Fluxo de Verificação
 
 ```
-1. Request chega com Authorization: Bearer <access_token>
+1. Request chega com Authorization: Bearer <access token>
 
-2. AuthGuard valida JWT (assinatura, expiração)
-   → Extrai userId + tenantId
+2. AuthGuard valida o access token
+   → Verifica assinatura e expiração do JWT
+   → Rejeita token com scope (selectionToken) e token sem sid
+   → Busca a Session pelo sid e exige revokedAt IS NULL, expiresAt > now(),
+     User.isActive = true e Tenant.isActive = true
+   → Extrai userId + tenantId da Sessão (fonte de verdade)
+   → Se qualquer verificação falhar: 401 Unauthorized
 
 3. TenantGuard valida acesso ao tenant
    → SELECT FROM "UserTenant"

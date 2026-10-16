@@ -85,10 +85,10 @@ Este documento registra exclusivamente regras de negócio já definidas pelo res
 * Após autenticar, o usuário escolhe explicitamente o Tenant.
 * A sessão fica associada ao Tenant escolhido.
 * A Session é criada durante a seleção do Tenant, não durante o login.
-* Access token contém apenas userId, tenantId, iat e exp.
+* Access token contém apenas userId, tenantId, sid da sessão, iat e exp.
 * Access token não contém role nem permissions.
 * Access token expira em 15 minutos (fixo).
-* Access token é validado pela assinatura JWT, não consultando a tabela Session.
+* Access token é validado pela assinatura JWT **e** pela sessão indicada no `sid`: a sessão precisa existir, não estar revogada, não estar expirada, e o User e o Tenant precisam estar ativos.
 * Refresh token é stateful.
 * Refresh token é uma string aleatória e armazenado apenas como hash SHA-256.
 * Sessão possui tenantId.
@@ -98,6 +98,8 @@ Este documento registra exclusivamente regras de negócio já definidas pelo res
 * Remoção ou suspensão de vínculo UserTenant revoga sessões daquele Tenant.
 * Convites são enviados por email.
 * Convites expiram em 7 dias.
+
+**Estado da implementação:** hoje só o logout escreve `revokedAt`. A revogação por desativação de User e por suspensão/remoção de UserTenant é regra definida e ainda não implementada — o acesso já é bloqueado pela validação por request, mas as sessões continuam registradas como ativas no banco (ver `docs/architecture.md`, “Revogação de Sessões”).
 
 ---
 
@@ -123,6 +125,14 @@ Este documento registra exclusivamente regras de negócio já definidas pelo res
 * O vínculo pode conter ativo/inativo, horários, função e especialidade exercida naquela clínica.
 * Veterinarian.name é o nome profissional, distinto de User.name.
 
+### Veterinarian — Edição a partir de uma clínica (decidido em 2026-10-16; implementação pendente)
+
+* Veterinarian é entidade global, compartilhada entre Tenants.
+* `name` e `bio` são dados globais: só o **próprio veterinário** (o User vinculado, `Veterinarian.userId`) pode alterá-los.
+* O ADMIN de uma clínica altera apenas os dados do vínculo (`TenantVeterinarian`): sala, função, horário e observações. Não altera dados globais do profissional.
+* **Implementação pendente:** hoje `PATCH /veterinarians/:id` altera `name`/`bio` globais a partir de qualquer clínica que tenha `VETERINARIAN_UPDATE`.
+* **Lacuna aberta:** como `Veterinarian` pode existir sem User (regra acima), não está definido quem corrige `name`/`bio` de um profissional sem User vinculado.
+
 ---
 
 ## Especialidades
@@ -130,6 +140,9 @@ Este documento registra exclusivamente regras de negócio já definidas pelo res
 * Specialty é entidade global.
 * Veterinarian ↔ Specialty é N:M.
 * As especialidades são compartilhadas entre Tenants.
+* Especialidades continuam globais do Veterinarian — não existe especialidade por vínculo com o Tenant.
+* Somente o **próprio veterinário** altera seu conjunto de especialidades; a clínica não altera, nem apaga, especialidades registradas por outra clínica.
+* **Implementação pendente:** hoje `PUT /veterinarians/:id/specialties` substitui o conjunto global a partir de qualquer clínica (`deleteMany` sem filtro de tenant).
 
 ---
 
@@ -211,6 +224,13 @@ Este documento registra exclusivamente regras de negócio já definidas pelo res
 * `Animal.status` e `dateOfDeath` são campos INDEPENDENTES.
 * Preenchimento de `dateOfDeath` NÃO altera automaticamente `Animal.status`.
 * Não criar regra implícita que converta automaticamente ACTIVE em DECEASED.
+
+---
+
+## Animal — Vínculo com a Clínica
+
+* Decidido em 2026-10-16: o vínculo Animal↔clínica (`POST /animals/:id/clinic`) é criado por quem tem `ANIMAL_CREATE` no tenant, **sem exigência adicional** de consentimento do tutor ou de vínculo prévio do tutor com a clínica. O comportamento atual é o definido.
+* **Lacuna aberta:** não está definido o que o status INACTIVE do vínculo (`TenantAnimal.status`) deve bloquear. Hoje ele não impede novos registros clínicos (peso, alergia, medicação, vacinação, consulta e agendamento) — os serviços verificam apenas a existência do vínculo, nunca o status.
 
 ---
 
