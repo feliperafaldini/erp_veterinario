@@ -126,13 +126,15 @@ Este documento registra exclusivamente regras de negócio já definidas pelo res
 * O vínculo pode conter ativo/inativo, horários, função e especialidade exercida naquela clínica.
 * Veterinarian.name é o nome profissional, distinto de User.name.
 
-### Veterinarian — Edição a partir de uma clínica (decidido em 2026-10-16; implementação pendente)
+### Veterinarian — Edição a partir de uma clínica (decidido em 2026-10-16; implementado)
 
 * Veterinarian é entidade global, compartilhada entre Tenants.
 * `name` e `bio` são dados globais: só o **próprio veterinário** (o User vinculado, `Veterinarian.userId`) pode alterá-los.
 * O ADMIN de uma clínica altera apenas os dados do vínculo (`TenantVeterinarian`): sala, função, horário e observações. Não altera dados globais do profissional.
-* **Implementação pendente:** hoje `PATCH /veterinarians/:id` altera `name`/`bio` globais a partir de qualquer clínica que tenha `VETERINARIAN_UPDATE`.
-* **Lacuna aberta:** como `Veterinarian` pode existir sem User (regra acima), não está definido quem corrige `name`/`bio` de um profissional sem User vinculado.
+* **Implementado:** `PATCH /veterinarians/:id` (`VETERINARIAN_UPDATE`) aceita somente campos do vínculo (`room`, `function`, `notes`); enviar `name`/`bio` nessa rota responde `400` (campo fora do contrato) e nada é gravado.
+* **Implementado:** `PATCH /veterinarians/me` (sem exigência de permissão) altera `name`/`bio` do perfil do próprio usuário autenticado. A posse é resolvida no servidor a partir do `userId` do token — a rota não aceita id de terceiro. Sem perfil de veterinário para o usuário, responde `404`.
+* **Lacuna aberta:** como `Veterinarian` pode existir sem User (regra acima), não está definido quem corrige `name`/`bio` de um profissional sem User vinculado. Hoje esse caso fica sem caminho de edição: `/veterinarians/me` depende de `Veterinarian.userId`.
+* **Decisão técnica:** `/veterinarians/me` opera sobre o dado global do próprio usuário e não depende de o usuário ter vínculo (`TenantVeterinarian`) no tenant da sessão atual.
 
 ---
 
@@ -143,7 +145,7 @@ Este documento registra exclusivamente regras de negócio já definidas pelo res
 * As especialidades são compartilhadas entre Tenants.
 * Especialidades continuam globais do Veterinarian — não existe especialidade por vínculo com o Tenant.
 * Somente o **próprio veterinário** altera seu conjunto de especialidades; a clínica não altera, nem apaga, especialidades registradas por outra clínica.
-* **Implementação pendente:** hoje `PUT /veterinarians/:id/specialties` substitui o conjunto global a partir de qualquer clínica (`deleteMany` sem filtro de tenant).
+* **Implementado:** `PUT /veterinarians/:id/specialties` foi removido (a rota não existe mais). O conjunto é alterado apenas por `PUT /veterinarians/me/specialties`, sem exigência de permissão, com a posse resolvida no servidor a partir do `userId` autenticado.
 
 ---
 
