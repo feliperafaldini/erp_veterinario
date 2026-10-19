@@ -18,6 +18,7 @@ import { VeterinarianService } from './veterinarian.service';
 import {
   CreateVeterinarianDto,
   UpdateVeterinarianDto,
+  UpdateOwnProfileDto,
   FindOneParams,
   AssociateSpecialtiesDto,
 } from './dto';
@@ -49,6 +50,16 @@ export class VeterinarianController {
     return this.veterinarianService.findOne(tenantId, params.id);
   }
 
+  // Dados GLOBAIS do próprio Veterinarian (name/bio). A posse é resolvida
+  // no serviço a partir do usuário autenticado — nenhum id de terceiro na rota.
+  @Patch('me')
+  updateOwnProfile(
+    @UserId() userId: string,
+    @Body() dto: UpdateOwnProfileDto,
+  ) {
+    return this.veterinarianService.updateOwnProfile(userId, dto);
+  }
+
   @Patch(':id')
   @RequirePermissions('VETERINARIAN_UPDATE')
   update(
@@ -65,16 +76,15 @@ export class VeterinarianController {
     return this.veterinarianService.deactivate(tenantId, params.id);
   }
 
-  @Put(':id/specialties')
-  @RequirePermissions('VETERINARIAN_UPDATE')
-  associateSpecialties(
-    @TenantId() tenantId: string,
-    @Param() params: FindOneParams,
+  // Especialidades são globais do Veterinarian: somente o próprio
+  // veterinário as altera (docs/business-rules.md, decisão de 2026-10-16).
+  @Put('me/specialties')
+  replaceOwnSpecialties(
+    @UserId() userId: string,
     @Body() dto: AssociateSpecialtiesDto,
   ) {
-    return this.veterinarianService.associateSpecialties(
-      tenantId,
-      params.id,
+    return this.veterinarianService.replaceOwnSpecialties(
+      userId,
       dto.specialtyIds,
     );
   }

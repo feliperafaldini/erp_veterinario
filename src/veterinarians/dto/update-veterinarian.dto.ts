@@ -1,16 +1,9 @@
 import { IsOptional, IsString, MaxLength } from 'class-validator';
 
+// Dados do vínculo TenantVeterinarian. name/bio são dados GLOBAIS do
+// Veterinarian e são alterados apenas por PATCH /veterinarians/me
+// (regra decidida em 2026-10-16, docs/business-rules.md).
 export class UpdateVeterinarianDto {
-  @IsOptional()
-  @IsString()
-  @MaxLength(200)
-  name?: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(1000)
-  bio?: string;
-
   @IsOptional()
   @IsString()
   @MaxLength(100)

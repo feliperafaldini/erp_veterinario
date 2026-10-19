@@ -7,6 +7,7 @@ import {
   seedRolesAndPermissions,
   registerUser,
   getPrisma,
+  setUserRole,
 } from './helpers';
 
 describe('VETERINARIANS', () => {
@@ -341,7 +342,7 @@ describe('VETERINARIANS', () => {
   });
 
   describe('PATCH /api/veterinarians/:id', () => {
-    it('should update veterinarian profile', async () => {
+    it('should update link fields (room, function, notes)', async () => {
       const user = await registerUser(app, {
         email: 'vet@test.com',
         password: 'password123',
@@ -353,6 +354,7 @@ describe('VETERINARIANS', () => {
         .send({
           name: 'Dr. João Silva',
           crmv: 'CRMV-SP 12345',
+          bio: 'Original',
         })
         .expect(201);
 
@@ -360,17 +362,48 @@ describe('VETERINARIANS', () => {
         .patch(`/api/veterinarians/${createResponse.body.id}`)
         .set('Authorization', `Bearer ${user.accessToken}`)
         .send({
-          name: 'Dr. João Silva Santos',
-          bio: 'Atualizado',
           room: 'Sala 101',
           function: 'Clínico Geral',
+          notes: 'Atende manhãs',
         })
         .expect(200);
 
-      expect(response.body.veterinarian.name).toBe('Dr. João Silva Santos');
-      expect(response.body.veterinarian.bio).toBe('Atualizado');
       expect(response.body.room).toBe('Sala 101');
       expect(response.body.function).toBe('Clínico Geral');
+      expect(response.body.notes).toBe('Atende manhãs');
+      expect(response.body.veterinarian.name).toBe('Dr. João Silva');
+      expect(response.body.veterinarian.bio).toBe('Original');
+    });
+
+    it('should reject global fields (name/bio) on the link route', async () => {
+      const user = await registerUser(app, {
+        email: 'vet@test.com',
+        password: 'password123',
+      });
+
+      const createResponse = await request(app.getHttpServer())
+        .post('/api/veterinarians')
+        .set('Authorization', `Bearer ${user.accessToken}`)
+        .send({
+          name: 'Dr. João Silva',
+          crmv: 'CRMV-SP 12345',
+          bio: 'Original',
+        })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .patch(`/api/veterinarians/${createResponse.body.id}`)
+        .set('Authorization', `Bearer ${user.accessToken}`)
+        .send({ name: 'Dr. João Silva Santos', bio: 'Atualizado' })
+        .expect(400);
+
+      const prisma = getPrisma(app);
+      const veterinarian = await prisma.veterinarian.findFirst({
+        where: { crmv: 'CRMV-SP 12345' },
+      });
+
+      expect(veterinarian!.name).toBe('Dr. João Silva');
+      expect(veterinarian!.bio).toBe('Original');
     });
 
     it('should return 404 for nonexistent veterinarian', async () => {
@@ -384,7 +417,7 @@ describe('VETERINARIANS', () => {
       await request(app.getHttpServer())
         .patch(`/api/veterinarians/${fakeId}`)
         .set('Authorization', `Bearer ${user.accessToken}`)
-        .send({ name: 'Updated' })
+        .send({ room: 'Sala 101' })
         .expect(404);
     });
 
@@ -411,8 +444,97 @@ describe('VETERINARIANS', () => {
       await request(app.getHttpServer())
         .patch(`/api/veterinarians/${createResponse.body.id}`)
         .set('Authorization', `Bearer ${user2.accessToken}`)
-        .send({ name: 'Hacked' })
+        .send({ room: 'Hacked' })
         .expect(404);
+    });
+  });
+
+  describe('PATCH /api/veterinarians/me', () => {
+    it('should let the veterinarian change own name/bio without VETERINARIAN_UPDATE', async () => {
+      const user = await registerUser(app, {
+        email: 'vet@test.com',
+        password: 'password123',
+      });
+
+      await request(app.getHttpServer())
+        .post('/api/veterinarians')
+        .set('Authorization', `Bearer ${user.accessToken}`)
+        .send({
+          name: 'Dr. João Silva',
+          crmv: 'CRMV-SP 12345',
+          bio: 'Original',
+        })
+        .expect(201);
+
+      await setUserRole(app, user, 'VETERINARIAN');
+
+      const response = await request(app.getHttpServer())
+        .patch('/api/veterinarians/me')
+        .set('Authorization', `Bearer ${user.accessToken}`)
+        .send({ name: 'Dr. João Silva Santos', bio: 'Atualizado' })
+        .expect(200);
+
+      expect(response.body.name).toBe('Dr. João Silva Santos');
+      expect(response.body.bio).toBe('Atualizado');
+      expect(response.body.crmv).toBe('CRMV-SP 12345');
+      expect(Array.isArray(response.body.veterinarianSpecialties)).toBe(true);
+    });
+
+    it('should return 404 when the user has no veterinarian profile', async () => {
+      const user = await registerUser(app, {
+        email: 'recepcao@test.com',
+        password: 'password123',
+      });
+
+      await request(app.getHttpServer())
+        .patch('/api/veterinarians/me')
+        .set('Authorization', `Bearer ${user.accessToken}`)
+        .send({ name: 'Qualquer Nome' })
+        .expect(404);
+    });
+
+    it('should not change global fields of a veterinarian from another tenant', async () => {
+      const user1 = await registerUser(app, {
+        email: 'vet1@test.com',
+        password: 'password123',
+      });
+
+      const user2 = await registerUser(app, {
+        email: 'vet2@test.com',
+        password: 'password123',
+      });
+
+      await request(app.getHttpServer())
+        .post('/api/veterinarians')
+        .set('Authorization', `Bearer ${user1.accessToken}`)
+        .send({ name: 'Dr. João Silva', crmv: 'CRMV-SP 11111' })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .post('/api/veterinarians')
+        .set('Authorization', `Bearer ${user2.accessToken}`)
+        .send({ name: 'Dra. Maria Santos', crmv: 'CRMV-SP 22222' })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .patch('/api/veterinarians/me')
+        .set('Authorization', `Bearer ${user1.accessToken}`)
+        .send({ name: 'Dr. João Silva Editado' })
+        .expect(200);
+
+      const prisma = getPrisma(app);
+      const other = await prisma.veterinarian.findFirst({
+        where: { crmv: 'CRMV-SP 22222' },
+      });
+
+      expect(other!.name).toBe('Dra. Maria Santos');
+    });
+
+    it('should return 401 without authentication', async () => {
+      await request(app.getHttpServer())
+        .patch('/api/veterinarians/me')
+        .send({ name: 'Qualquer Nome' })
+        .expect(401);
     });
   });
 
@@ -481,8 +603,8 @@ describe('VETERINARIANS', () => {
     });
   });
 
-  describe('PUT /api/veterinarians/:id/specialties', () => {
-    it('should associate specialties', async () => {
+  describe('PUT /api/veterinarians/me/specialties', () => {
+    it('should let the veterinarian replace own specialties without VETERINARIAN_UPDATE', async () => {
       const prisma = getPrisma(app);
 
       const specialty1 = await prisma.specialty.upsert({
@@ -502,7 +624,7 @@ describe('VETERINARIANS', () => {
         password: 'password123',
       });
 
-      const createResponse = await request(app.getHttpServer())
+      await request(app.getHttpServer())
         .post('/api/veterinarians')
         .set('Authorization', `Bearer ${user.accessToken}`)
         .send({
@@ -511,16 +633,20 @@ describe('VETERINARIANS', () => {
         })
         .expect(201);
 
+      await setUserRole(app, user, 'VETERINARIAN');
+
       const response = await request(app.getHttpServer())
-        .put(`/api/veterinarians/${createResponse.body.id}/specialties`)
+        .put('/api/veterinarians/me/specialties')
         .set('Authorization', `Bearer ${user.accessToken}`)
         .send({
           specialtyIds: [specialty1.id, specialty2.id],
         })
         .expect(200);
 
-      expect(response.body.veterinarian.veterinarianSpecialties).toHaveLength(2);
-      const names = response.body.veterinarian.veterinarianSpecialties.map((s: any) => s.specialty.name);
+      expect(response.body.veterinarianSpecialties).toHaveLength(2);
+      const names = response.body.veterinarianSpecialties.map(
+        (s: any) => s.specialty.name,
+      );
       expect(names).toContain('Cardiologia');
       expect(names).toContain('Dermatologia');
     });
@@ -545,7 +671,7 @@ describe('VETERINARIANS', () => {
         password: 'password123',
       });
 
-      const createResponse = await request(app.getHttpServer())
+      await request(app.getHttpServer())
         .post('/api/veterinarians')
         .set('Authorization', `Bearer ${user.accessToken}`)
         .send({
@@ -556,18 +682,108 @@ describe('VETERINARIANS', () => {
         .expect(201);
 
       const response = await request(app.getHttpServer())
-        .put(`/api/veterinarians/${createResponse.body.id}/specialties`)
+        .put('/api/veterinarians/me/specialties')
         .set('Authorization', `Bearer ${user.accessToken}`)
         .send({
           specialtyIds: [specialty2.id],
         })
         .expect(200);
 
-      expect(response.body.veterinarian.veterinarianSpecialties).toHaveLength(1);
-      expect(response.body.veterinarian.veterinarianSpecialties[0].specialty.name).toBe('Dermatologia');
+      expect(response.body.veterinarianSpecialties).toHaveLength(1);
+      expect(response.body.veterinarianSpecialties[0].specialty.name).toBe(
+        'Dermatologia',
+      );
     });
 
     it('should return 404 for nonexistent specialty', async () => {
+      const user = await registerUser(app, {
+        email: 'vet@test.com',
+        password: 'password123',
+      });
+
+      await request(app.getHttpServer())
+        .post('/api/veterinarians')
+        .set('Authorization', `Bearer ${user.accessToken}`)
+        .send({
+          name: 'Dr. João Silva',
+          crmv: 'CRMV-SP 12345',
+        })
+        .expect(201);
+
+      const fakeSpecialtyId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
+
+      await request(app.getHttpServer())
+        .put('/api/veterinarians/me/specialties')
+        .set('Authorization', `Bearer ${user.accessToken}`)
+        .send({
+          specialtyIds: [fakeSpecialtyId],
+        })
+        .expect(404);
+    });
+
+    it('should return 404 when the user has no veterinarian profile', async () => {
+      const user = await registerUser(app, {
+        email: 'recepcao@test.com',
+        password: 'password123',
+      });
+
+      await request(app.getHttpServer())
+        .put('/api/veterinarians/me/specialties')
+        .set('Authorization', `Bearer ${user.accessToken}`)
+        .send({ specialtyIds: [] })
+        .expect(404);
+    });
+
+    it('should not change specialties of a veterinarian from another tenant', async () => {
+      const prisma = getPrisma(app);
+
+      const specialty = await prisma.specialty.upsert({
+        where: { name: 'Cardiologia' },
+        update: {},
+        create: { name: 'Cardiologia' },
+      });
+
+      const user1 = await registerUser(app, {
+        email: 'vet1@test.com',
+        password: 'password123',
+      });
+
+      const user2 = await registerUser(app, {
+        email: 'vet2@test.com',
+        password: 'password123',
+      });
+
+      await request(app.getHttpServer())
+        .post('/api/veterinarians')
+        .set('Authorization', `Bearer ${user1.accessToken}`)
+        .send({ name: 'Dr. João Silva', crmv: 'CRMV-SP 11111' })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .post('/api/veterinarians')
+        .set('Authorization', `Bearer ${user2.accessToken}`)
+        .send({
+          name: 'Dra. Maria Santos',
+          crmv: 'CRMV-SP 22222',
+          specialtyIds: [specialty.id],
+        })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .put('/api/veterinarians/me/specialties')
+        .set('Authorization', `Bearer ${user1.accessToken}`)
+        .send({ specialtyIds: [] })
+        .expect(200);
+
+      const other = await prisma.veterinarian.findFirst({
+        where: { crmv: 'CRMV-SP 22222' },
+        include: { veterinarianSpecialties: true },
+      });
+
+      expect(other!.veterinarianSpecialties).toHaveLength(1);
+    });
+
+    it('should return 404 for the removed PUT /:id/specialties route', async () => {
       const user = await registerUser(app, {
         email: 'vet@test.com',
         password: 'password123',
@@ -582,20 +798,16 @@ describe('VETERINARIANS', () => {
         })
         .expect(201);
 
-      const fakeSpecialtyId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
-
       await request(app.getHttpServer())
         .put(`/api/veterinarians/${createResponse.body.id}/specialties`)
         .set('Authorization', `Bearer ${user.accessToken}`)
-        .send({
-          specialtyIds: [fakeSpecialtyId],
-        })
+        .send({ specialtyIds: [] })
         .expect(404);
     });
 
     it('should return 401 without authentication', async () => {
       await request(app.getHttpServer())
-        .put('/api/veterinarians/00000000-0000-0000-0000-000000000000/specialties')
+        .put('/api/veterinarians/me/specialties')
         .send({ specialtyIds: [] })
         .expect(401);
     });
@@ -651,7 +863,7 @@ describe('VETERINARIANS', () => {
       await request(app.getHttpServer())
         .patch(`/api/veterinarians/${createResponse.body.id}`)
         .set('Authorization', `Bearer ${user2.accessToken}`)
-        .send({ name: 'Hacked' })
+        .send({ room: 'Hacked' })
         .expect(404);
     });
 
@@ -882,7 +1094,7 @@ describe('VETERINARIANS', () => {
       await request(app.getHttpServer())
         .patch(`/api/veterinarians/${createResponse.body.id}`)
         .set('Authorization', `Bearer ${user.accessToken}`)
-        .send({ name: 'Updated' })
+        .send({ room: 'Sala 2' })
         .expect(403);
     });
 

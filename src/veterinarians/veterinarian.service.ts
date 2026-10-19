@@ -47,6 +47,26 @@ const TENANT_VETERINARIAN_SELECT = {
   },
 } as const;
 
+const VETERINARIAN_WITH_SPECIALTIES_SELECT = {
+  id: true,
+  name: true,
+  crmv: true,
+  bio: true,
+  createdAt: true,
+  updatedAt: true,
+  veterinarianSpecialties: {
+    select: {
+      specialty: {
+        select: {
+          id: true,
+          name: true,
+          description: true,
+        },
+      },
+    },
+  },
+} as const;
+
 @Injectable()
 export class VeterinarianService {
   constructor(private readonly prisma: PrismaService) {}
@@ -152,8 +172,6 @@ export class VeterinarianService {
     tenantId: string,
     id: string,
     data: {
-      name?: string;
-      bio?: string;
       room?: string;
       function?: string;
       notes?: string;
@@ -164,24 +182,10 @@ export class VeterinarianService {
         id,
         tenantId,
       },
-      include: {
-        veterinarian: true,
-      },
     });
 
     if (!tenantVet) {
       throw new NotFoundException(`Veterinarian not found in this clinic`);
-    }
-
-    const vetUpdate: Record<string, unknown> = {};
-    if (data.name !== undefined) vetUpdate.name = data.name;
-    if (data.bio !== undefined) vetUpdate.bio = data.bio;
-
-    if (Object.keys(vetUpdate).length > 0) {
-      await this.prisma.veterinarian.update({
-        where: { id: tenantVet.veterinarianId },
-        data: vetUpdate,
-      });
     }
 
     const tenantUpdate: Record<string, unknown> = {};
@@ -225,21 +229,34 @@ export class VeterinarianService {
     return this.findOne(tenantId, id);
   }
 
-  async associateSpecialties(
-    tenantId: string,
-    id: string,
-    specialtyIds: string[],
-  ) {
-    const tenantVet = await this.prisma.tenantVeterinarian.findFirst({
-      where: {
-        id,
-        tenantId,
-      },
-    });
+  // -------- Próprio veterinário (dados globais) --------
 
-    if (!tenantVet) {
-      throw new NotFoundException(`Veterinarian not found in this clinic`);
+  // name/bio e especialidades são dados GLOBAIS do Veterinarian. Somente o
+  // próprio veterinário (o User vinculado, Veterinarian.userId) os altera —
+  // decisão de 2026-10-16 (docs/business-rules.md). A posse é resolvida pelo
+  // usuário autenticado; nenhum id de terceiro é aceito nestas operações.
+  async updateOwnProfile(
+    userId: string,
+    data: { name?: string; bio?: string },
+  ) {
+    const veterinarian = await this.findOwnProfileOrThrow(userId);
+
+    const update: Record<string, unknown> = {};
+    if (data.name !== undefined) update.name = data.name;
+    if (data.bio !== undefined) update.bio = data.bio;
+
+    if (Object.keys(update).length > 0) {
+      await this.prisma.veterinarian.update({
+        where: { id: veterinarian.id },
+        data: update,
+      });
     }
+
+    return this.findOwnProfileOrThrow(userId);
+  }
+
+  async replaceOwnSpecialties(userId: string, specialtyIds: string[]) {
+    const veterinarian = await this.findOwnProfileOrThrow(userId);
 
     for (const specialtyId of specialtyIds) {
       const specialty = await this.prisma.specialty.findUnique({
@@ -253,9 +270,24 @@ export class VeterinarianService {
       }
     }
 
-    await this.replaceSpecialties(tenantVet.veterinarianId, specialtyIds);
+    await this.replaceSpecialties(veterinarian.id, specialtyIds);
 
-    return this.findOne(tenantId, id);
+    return this.findOwnProfileOrThrow(userId);
+  }
+
+  private async findOwnProfileOrThrow(userId: string) {
+    const veterinarian = await this.prisma.veterinarian.findUnique({
+      where: { userId },
+      select: VETERINARIAN_WITH_SPECIALTIES_SELECT,
+    });
+
+    if (!veterinarian) {
+      throw new NotFoundException(
+        `Veterinarian profile not found for this user`,
+      );
+    }
+
+    return veterinarian;
   }
 
   private async replaceSpecialties(
