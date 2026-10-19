@@ -7,7 +7,7 @@
 * PostgreSQL compartilhado com isolamento por `tenant_id`.
 * Backend é responsável por garantir isolamento.
 * Cross-tenant access deve ser bloqueado em todas as camadas.
-* RLS será avaliado posteriormente como camada adicional.
+* RLS foi avaliado em 2026-10-19 (`docs/rls-evaluation.md`): recomendação de não implementar agora, com gatilhos objetivos de reavaliação (spike da opção com `SET LOCAL` por transação antes da produção).
 
 ### Regra de Isolamento
 

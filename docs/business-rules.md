@@ -11,7 +11,7 @@ Este documento registra exclusivamente regras de negócio já definidas pelo res
 * O banco utiliza PostgreSQL compartilhado.
 * O isolamento inicial utiliza tenant_id.
 * A aplicação deve impedir acesso cross-tenant.
-* RLS será avaliado posteriormente como camada adicional de defesa.
+* RLS foi avaliado em 2026-10-19 (`docs/rls-evaluation.md`): camada adicional de defesa ainda não implementada; ver a avaliação para escopo correto (só tabelas privadas por tenant) e gatilhos de reavaliação.
 
 ---
 
