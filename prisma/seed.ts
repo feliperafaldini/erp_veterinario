@@ -23,10 +23,11 @@ const ROLES = ["ADMIN", "VETERINARIAN", "RECEPTIONIST"] as const;
 // architecture.md actions padrão: CREATE, READ, UPDATE, DELETE, MANAGE
 // READ é implícito para todos os recursos que possuem CREATE/UPDATE.
 //
-// USER_MANAGE é mencionada em architecture.md (convites) mas sem
-// mapeamento Role↔Permission definido. Não incluída no seed.
+// USER_MANAGE: mapeamento definido em 2026-10-19 (docs/business-rules.md),
+// gestão de vínculos no próprio tenant — atribuída ao ADMIN.
 
 const PERMISSIONS = [
+  { key: "USER_MANAGE", resource: "USER", action: "MANAGE" },
   { key: "ANIMAL_CREATE", resource: "ANIMAL", action: "CREATE" },
   { key: "ANIMAL_READ", resource: "ANIMAL", action: "READ" },
   { key: "ANIMAL_UPDATE", resource: "ANIMAL", action: "UPDATE" },
@@ -85,6 +86,8 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "VETERINARIAN_READ",
     "VETERINARIAN_UPDATE",
     "VETERINARIAN_DEACTIVATE",
+    // Gestão de usuários e vínculos (2026-10-19)
+    "USER_MANAGE",
     // Domínio clínico (P1-a)
     "APPOINTMENT_CREATE",
     "APPOINTMENT_READ",
