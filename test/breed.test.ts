@@ -19,6 +19,16 @@ describe('BREEDS', () => {
   beforeAll(async () => {
     app = await createTestApp();
     await seedRolesAndPermissions(app);
+  });
+
+  afterAll(async () => {
+    await cleanupDatabase(app);
+    await app.close();
+  });
+
+  beforeEach(async () => {
+    await cleanupDatabase(app);
+    await seedRolesAndPermissions(app);
 
     const prisma = getPrisma(app);
 
@@ -50,6 +60,14 @@ describe('BREEDS', () => {
     });
 
     await prisma.breed.upsert({
+      where: {
+        speciesId_name: { speciesId: caoSpeciesId, name: 'Sem raça definida' },
+      },
+      update: {},
+      create: { speciesId: caoSpeciesId, name: 'Sem raça definida' },
+    });
+
+    await prisma.breed.upsert({
       where: { speciesId_name: { speciesId: gatoSpeciesId, name: 'Siamês' } },
       update: {},
       create: { speciesId: gatoSpeciesId, name: 'Siamês' },
@@ -60,16 +78,6 @@ describe('BREEDS', () => {
       update: {},
       create: { speciesId: gatoSpeciesId, name: 'Persa' },
     });
-  });
-
-  afterAll(async () => {
-    await cleanupDatabase(app);
-    await app.close();
-  });
-
-  beforeEach(async () => {
-    await cleanupDatabase(app);
-    await seedRolesAndPermissions(app);
   });
 
   describe('GET /api/breeds', () => {
@@ -147,7 +155,7 @@ describe('BREEDS', () => {
         .expect(200);
 
       expect(Array.isArray(response.body)).toBe(true);
-      expect(response.body.length).toBe(6);
+      expect(response.body.length).toBe(3);
 
       const names = response.body.map((b: any) => b.name);
       expect(names).toContain('Labrador Retriever');

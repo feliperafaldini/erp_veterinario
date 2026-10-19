@@ -17,6 +17,16 @@ describe('SPECIES', () => {
   beforeAll(async () => {
     app = await createTestApp();
     await seedRolesAndPermissions(app);
+  });
+
+  afterAll(async () => {
+    await cleanupDatabase(app);
+    await app.close();
+  });
+
+  beforeEach(async () => {
+    await cleanupDatabase(app);
+    await seedRolesAndPermissions(app);
 
     const prisma = getPrisma(app);
 
@@ -38,16 +48,6 @@ describe('SPECIES', () => {
         scientificName: 'Felis catus',
       },
     });
-  });
-
-  afterAll(async () => {
-    await cleanupDatabase(app);
-    await app.close();
-  });
-
-  beforeEach(async () => {
-    await cleanupDatabase(app);
-    await seedRolesAndPermissions(app);
   });
 
   describe('GET /api/species', () => {

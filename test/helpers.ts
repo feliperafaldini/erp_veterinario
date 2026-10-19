@@ -79,6 +79,11 @@ export async function cleanupDatabase(app: INestApplication): Promise<void> {
   await prisma.veterinarianSpecialty.deleteMany();
   await prisma.tenantVeterinarian.deleteMany();
   await prisma.veterinarian.deleteMany();
+  // Catálogo global criado por teste (upsert): sem isso as linhas
+  // acumulam no banco de desenvolvimento entre as rodadas da suíte.
+  await prisma.breed.deleteMany();
+  await prisma.species.deleteMany();
+  await prisma.specialty.deleteMany();
 }
 
 export async function seedRolesAndPermissions(
@@ -96,6 +101,7 @@ export async function seedRolesAndPermissions(
   }
 
   const permissions = [
+    { key: 'USER_MANAGE', resource: 'USER', action: 'MANAGE' },
     { key: 'ANIMAL_CREATE', resource: 'ANIMAL', action: 'CREATE' },
     { key: 'ANIMAL_READ', resource: 'ANIMAL', action: 'READ' },
     { key: 'ANIMAL_UPDATE', resource: 'ANIMAL', action: 'UPDATE' },
@@ -151,6 +157,8 @@ export async function seedRolesAndPermissions(
       'VETERINARIAN_READ',
       'VETERINARIAN_UPDATE',
       'VETERINARIAN_DEACTIVATE',
+      // Gestão de usuários e vínculos (2026-10-19)
+      'USER_MANAGE',
       // Domínio clínico (P1-a)
       'APPOINTMENT_CREATE',
       'APPOINTMENT_READ',

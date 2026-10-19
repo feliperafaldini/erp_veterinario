@@ -17,6 +17,16 @@ describe('ANIMAL_TUTORS', () => {
   beforeAll(async () => {
     app = await createTestApp();
     await seedRolesAndPermissions(app);
+  });
+
+  afterAll(async () => {
+    await cleanupDatabase(app);
+    await app.close();
+  });
+
+  beforeEach(async () => {
+    await cleanupDatabase(app);
+    await seedRolesAndPermissions(app);
 
     const prisma = getPrisma(app);
 
@@ -35,16 +45,6 @@ describe('ANIMAL_TUTORS', () => {
       create: { speciesId: caoSpeciesId, name: 'Sem raça definida' },
     });
     caoBreedId = caoDefaultBreed.id;
-  });
-
-  afterAll(async () => {
-    await cleanupDatabase(app);
-    await app.close();
-  });
-
-  beforeEach(async () => {
-    await cleanupDatabase(app);
-    await seedRolesAndPermissions(app);
   });
 
   async function createTutor(

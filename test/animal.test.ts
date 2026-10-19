@@ -19,6 +19,16 @@ describe('ANIMALS', () => {
   beforeAll(async () => {
     app = await createTestApp();
     await seedRolesAndPermissions(app);
+  });
+
+  afterAll(async () => {
+    await cleanupDatabase(app);
+    await app.close();
+  });
+
+  beforeEach(async () => {
+    await cleanupDatabase(app);
+    await seedRolesAndPermissions(app);
 
     const prisma = getPrisma(app);
 
@@ -61,16 +71,6 @@ describe('ANIMALS', () => {
       create: { speciesId: gatoSpeciesId, name: 'Siamês' },
     });
     gatoBreedId = gatoBreed.id;
-  });
-
-  afterAll(async () => {
-    await cleanupDatabase(app);
-    await app.close();
-  });
-
-  beforeEach(async () => {
-    await cleanupDatabase(app);
-    await seedRolesAndPermissions(app);
   });
 
   describe('POST /api/animals', () => {
