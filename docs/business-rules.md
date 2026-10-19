@@ -100,7 +100,20 @@ Este documento registra exclusivamente regras de negócio já definidas pelo res
 * Convites são enviados por email.
 * Convites expiram em 7 dias.
 
-**Estado da implementação:** hoje só o logout escreve `revokedAt`. A revogação por desativação de User e por suspensão/remoção de UserTenant é regra definida e ainda não implementada — o acesso já é bloqueado pela validação por request, mas as sessões continuam registradas como ativas no banco (ver `docs/architecture.md`, “Revogação de Sessões”).
+**Estado da implementação:** implementado em 2026-10-19 (módulo `src/users`). `PATCH /users/:id/deactivate` (somente Platform Admin) define `User.isActive=false` e grava `revokedAt` em **todas** as sessões do usuário; `PATCH /users/:id/suspend` e `/revoke` (ADMIN do tenant, permissão `USER_MANAGE`) mudam o status do vínculo só no tenant da sessão e revogam as sessões daquele tenant. O acesso já era bloqueado pela validação por request; agora o registro da sessão também reflete a revogação.
+
+---
+
+## Gestão de usuários e vínculos (decidido em 2026-10-19)
+
+* `GET /api/users` lista os usuários com vínculo no tenant da sessão; exige a permissão `USER_MANAGE`.
+* Suspensão (`SUSPENDED`) e revogação (`REVOKED`) do vínculo: ADMIN do próprio tenant, permissão `USER_MANAGE`. Afetam somente o tenant da sessão — vínculos e sessões em outros tenants permanecem intactos.
+* A linha do vínculo é preservada nos dois estados (histórico) e volta a `ACTIVE` por `PATCH /users/:id/restore`.
+* Reativação do vínculo não reabre sessões revogadas: o usuário autentica de novo.
+* Desativação global de `User` (`isActive=false` + revogação de todas as sessões, em todos os tenants) e reativação: somente Platform Admin (`User.isPlatformAdmin`), checado no servidor sobre o usuário autenticado.
+* Promoção a Platform Admin: por enquanto feita alterando o campo direto no banco. Gestão de platform admin é módulo futuro.
+* `USER_MANAGE` (resource `USER`, action `MANAGE`) é atribuída somente ao papel ADMIN, no seed de produção e no seed de testes.
+* Lacuna aberta: não há regra definida que impeça o ADMIN de suspender/revogar o próprio vínculo.
 
 ---
 

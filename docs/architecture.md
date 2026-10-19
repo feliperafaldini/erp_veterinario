@@ -137,7 +137,7 @@ Saída: { user, tenant }
 | Suspensão de UserTenant | Marcar sessões daquele tenant como `revokedAt = now()` |
 | Revogação de UserTenant | Marcar sessões daquele tenant como `revokedAt = now()` |
 
-**Estado da implementação:** hoje apenas o logout escreve `revokedAt`. As demais revogações em massa (desativação de User, suspensão/revogação de UserTenant) ainda não são executadas por nenhum código; o bloqueio correspondente acontece na validação por request (o guard rejeita o token quando `User.isActive` ou `Tenant.isActive` é falso), mas o registro da sessão permanece ativo no banco. Implementar a revogação em massa continua pendente.
+**Estado da implementação:** implementado em 2026-10-19 (módulo `src/users`). A desativação de `User` grava `revokedAt` em todas as sessões do usuário; a suspensão/revogação de `UserTenant` grava `revokedAt` nas sessões daquele tenant. O logout continua sendo o outro escritor de `revokedAt`. Ver `docs/business-rules.md`, “Gestão de usuários e vínculos”.
 
 ### Validação de Sessão
 
