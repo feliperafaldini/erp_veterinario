@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --rail-collapsed: 64px;
+    --rail-expanded: 232px;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-ground text-ink font-sans antialiased;
+    font-size: 13px;
+  }
+
+  /* Superfícies que o navegador desenha também pertencem ao sistema. */
+  ::selection {
+    background: #e9f1ed;
+    color: #111114;
+  }
+
+  input,
+  textarea,
+  select {
+    caret-color: #145c46;
+  }
+
+  :focus-visible {
+    outline: 2px solid #9cc4b3;
+    outline-offset: 2px;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #dcdce1 transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: #dcdce1;
+    border: 3px solid transparent;
+    background-clip: content-box;
+    border-radius: 9999px;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: #a3a3ad;
+    background-clip: content-box;
+  }
+}
+
+@layer components {
+  .num {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+  }
+
+  .micro-label {
+    @apply text-micro uppercase text-ink-4 font-medium;
+  }
+
+  .row-hover {
+    @apply transition-colors duration-150 hover:bg-[#f6f6f7];
+  }
+}

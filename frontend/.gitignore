@@ -1,0 +1,14 @@
+node_modules
+dist
+dist-ssr
+*.local
+.env
+.env.local
+
+# capturas de verificação do skill impeccable (evidência local, não versionar)
+.impeccable/review/
+
+# artefatos do tsc -b (composite build)
+vite.config.js
+vite.config.d.ts
+*.tsbuildinfo

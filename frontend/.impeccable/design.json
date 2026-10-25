@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-25T03:40:00-03:00",
+  "title": "Design System: ERP Veterinário",
+  "extensions": {
+    "colorMeta": {
+      "ground": {
+        "role": "neutral",
+        "displayName": "Chão de Clínica",
+        "canonical": "#fafafa",
+        "tonalRamp": ["#0f0f12", "#1b1b20", "#3a3a42", "#5e5e6a", "#8c8c96", "#b9b9c0", "#dcdce1", "#fafafa"]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Mesa",
+        "canonical": "#ffffff",
+        "tonalRamp": ["#101013", "#1d1d22", "#3d3d46", "#63636f", "#8f8f99", "#bcbcc4", "#e9e9ec", "#ffffff"]
+      },
+      "ink": {
+        "role": "primary",
+        "displayName": "Tinta Clínica",
+        "canonical": "#111114",
+        "tonalRamp": ["#111114", "#26262c", "#3d3d46", "#55555f", "#6f6f7b", "#8f8f99", "#bcbcc4", "#e9e9ec"]
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Verde Prontuário",
+        "canonical": "#145c46",
+        "tonalRamp": ["#08281d", "#0b3628", "#0f4635", "#145c46", "#2c7d61", "#5c9c82", "#9cc4b3", "#e9f1ed"]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#e9e9ec",
+        "tonalRamp": ["#111114", "#26262c", "#45454f", "#5e5e6a", "#8f8f99", "#c6c6cc", "#dcdce1", "#e9e9ec"]
+      }
+    },
+    "typographyMeta": {
+      "page": { "displayName": "Título de tela", "purpose": "Uma vez por página, 22px/600." },
+      "micro": { "displayName": "Micro-rótulo", "purpose": "Cabeçalho de tabela e rótulo de seção, 11px uppercase." },
+      "numerals": { "displayName": "Numerais tabulares", "purpose": "Horário, código interno e contadores." }
+    },
+    "shadows": [
+      {
+        "name": "lift",
+        "value": "0 1px 2px rgba(17,17,20,0.04), 0 12px 32px -12px rgba(17,17,20,0.18)",
+        "purpose": "Única elevação do sistema; exclusiva de modal."
+      }
+    ],
+    "motion": [
+      { "name": "ease-rail", "value": "cubic-bezier(0.22, 1, 0.36, 1)", "purpose": "Abertura do trilho, margem do conteúdo e fade dos rótulos." },
+      { "name": "duration-fast", "value": "150ms", "purpose": "Hover de item, cor de controle." },
+      { "name": "duration-rail", "value": "200ms", "purpose": "Largura do trilho e margem do conteúdo." }
+    ],
+    "breakpoints": [
+      { "name": "lg", "value": "1024px", "purpose": "Painel lateral de consultas entra." },
+      { "name": "desktop-demo", "value": "1366px", "purpose": "Notebook da apresentação; sem overflow horizontal." }
+    ],
+    "narrative": {
+      "northStar": "o trilho e a agenda",
+      "overview": "Duas coisas carregam a identidade: um trilho de ícones que só ganha voz quando o cursor chega perto, e uma agenda lida como tabela de horários. O resto é silêncio.",
+      "keyCharacteristics": [
+        "Superfícies brancas sobre ground #fafafa, separadas por hairline #e9e9ec.",
+        "Trilho de 64px que expande para 232px no hover.",
+        "Um único acento (verde profundo #145c46) em trabalho.",
+        "Cores semânticas exclusivas de estado de atendimento.",
+        "Numerais tabulares em horários, códigos e contadores."
+      ],
+      "rules": [
+        { "section": "Colors", "name": "A Regra do Acento em Trabalho", "body": "O acento só aparece onde significa algo: item ativo, ação primária, anel de foco, fio de seleção." },
+        { "section": "Typography", "name": "A Regra dos Numerais Tabulares", "body": "Tempo, código e contagem usam tabular-nums." },
+        { "section": "Layout", "name": "A Regra do Trilho Silencioso", "body": "O trilho nunca ocupa espaço de leitura; o rótulo só existe no hover." }
+      ],
+      "dos": [
+        "Tratar o animal como protagonista da linha.",
+        "Separar com hairline.",
+        "Traduzir estado de domínio para português na interface.",
+        "Manter o trilho colapsado por padrão."
+      ],
+      "donts": [
+        "Transformar a home em painel de indicadores.",
+        "Empilhar cards com sombra.",
+        "Expor SCHEDULED na tela.",
+        "Clarear cinza abaixo de 4,5:1."
+      ]
+    }
+  }
+}
