@@ -138,11 +138,11 @@ async function main() {
   }
 
   const animaisSpec = [
-    { nome: 'Thor', sp: cao, raca: srdCao, sexo: 'MALE', porte: 'LARGE', nasc: daysAgo(1180), cor: 'Caramelo', tutor: 0 },
-    { nome: 'Luna', sp: cao, raca: srdCao, sexo: 'FEMALE', porte: 'MEDIUM', nasc: daysAgo(760), cor: 'Preta', tutor: 0 },
-    { nome: 'Mia', sp: gato, raca: srdGato, sexo: 'FEMALE', porte: 'SMALL', nasc: daysAgo(1500), cor: 'Tricolor', tutor: 1 },
-    { nome: 'Rex', sp: cao, raca: srdCao, sexo: 'MALE', porte: 'LARGE', nasc: daysAgo(2200), cor: 'Marrom', tutor: 2 },
-    { nome: 'Nina', sp: gato, raca: srdGato, sexo: 'FEMALE', porte: 'SMALL', nasc: daysAgo(400), cor: 'Cinza', tutor: 3 },
+    { nome: 'Thor', sp: cao, raca: srdCao, sexo: 'MALE', porte: 'LARGE', nasc: daysAgo(1180), cor: 'Caramelo', tutor: 0, foto: '/demo/thor.jpg' },
+    { nome: 'Luna', sp: cao, raca: srdCao, sexo: 'FEMALE', porte: 'MEDIUM', nasc: daysAgo(760), cor: 'Preta', tutor: 0, foto: '/demo/luna.jpg' },
+    { nome: 'Mia', sp: gato, raca: srdGato, sexo: 'FEMALE', porte: 'SMALL', nasc: daysAgo(1500), cor: 'Tricolor', tutor: 1, foto: '/demo/mia.jpg' },
+    { nome: 'Rex', sp: cao, raca: srdCao, sexo: 'MALE', porte: 'LARGE', nasc: daysAgo(2200), cor: 'Marrom', tutor: 2, foto: '/demo/rex.jpg' },
+    { nome: 'Nina', sp: gato, raca: srdGato, sexo: 'FEMALE', porte: 'SMALL', nasc: daysAgo(400), cor: 'Cinza', tutor: 3, foto: '/demo/nina.jpg' },
   ];
 
   const animais = [];
@@ -155,6 +155,7 @@ async function main() {
       size: a.porte,
       dateOfBirth: a.nasc,
       color: a.cor,
+      photoUrl: a.foto,
       microchip: String(Date.now()).slice(-9) + String(animais.length),
     });
     const animalId = link.animal.id;
