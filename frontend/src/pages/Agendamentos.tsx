@@ -61,7 +61,7 @@ export function AppointmentsPage() {
     Promise.all([
       api.get<Appointment[]>('/appointments'),
       api.get<TenantAnimalItem[]>('/animals'),
-      api.get<VeterinarianLink[]>('/veterinarians'),
+      api.get<VeterinarianLink[]>('/veterinarians').catch(() => [] as VeterinarianLink[]),
       api.get<Tutor[]>('/tutors').catch(() => [] as Tutor[]),
     ])
       .then(([appts, animalLinks, vetLinks, tutorList]) => {

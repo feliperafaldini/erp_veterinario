@@ -116,6 +116,9 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "TUTOR_CREATE",
     "TUTOR_READ",
     "TUTOR_UPDATE",
+    // Leitura da equipe veterinária: necessária para escolher o veterinário
+    // ao criar agendamento/consulta.
+    "VETERINARIAN_READ",
     // Domínio clínico (P1-a)
     "APPOINTMENT_CREATE",
     "APPOINTMENT_READ",
@@ -144,6 +147,9 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "TUTOR_CREATE",
     "TUTOR_READ",
     "TUTOR_UPDATE",
+    // Leitura da equipe veterinária: a recepção escolhe o veterinário ao
+    // criar o agendamento.
+    "VETERINARIAN_READ",
     // Domínio clínico (P1-a): agendamento e leitura de registros clínicos
     "APPOINTMENT_CREATE",
     "APPOINTMENT_READ",

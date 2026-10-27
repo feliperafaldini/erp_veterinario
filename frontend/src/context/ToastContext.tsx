@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from 'react';
 
 type ToastType = 'success' | 'error' | 'info';
 
@@ -34,11 +34,16 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     [dismiss]
   );
 
-  const value: ToastContextValue = {
-    success: (msg) => show('success', msg),
-    error: (msg) => show('error', msg),
-    info: (msg) => show('info', msg),
-  };
+  const success = useCallback((msg: string) => show('success', msg), [show]);
+  const error = useCallback((msg: string) => show('error', msg), [show]);
+  const info = useCallback((msg: string) => show('info', msg), [show]);
+
+  // Estável entre renders: consumidores usam essas funções como dependência
+  // de useEffect e um objeto novo a cada toast dispararia refetch em loop.
+  const value = useMemo<ToastContextValue>(
+    () => ({ success, error, info }),
+    [success, error, info]
+  );
 
   return (
     <ToastContext.Provider value={value}>
