@@ -34,6 +34,7 @@ interface AppointmentDetailModalProps {
   animal?: Animal;
   onClose: () => void;
   onOpenRecord: (animalId: string) => void;
+  onOpenAttendance: (appointment: Appointment) => void;
   onStatusChange: (appointment: Appointment, status: AppointmentStatus) => Promise<void>;
 }
 
@@ -42,6 +43,7 @@ export function AppointmentDetailModal({
   animal,
   onClose,
   onOpenRecord,
+  onOpenAttendance,
   onStatusChange,
 }: AppointmentDetailModalProps) {
   const [saving, setSaving] = useState(false);
@@ -125,13 +127,13 @@ export function AppointmentDetailModal({
             Abrir prontuário
           </Button>
           {appointment.status === 'SCHEDULED' && (
-            <Button size="sm" disabled={saving} onClick={() => runStatus('IN_PROGRESS')}>
-              {saving ? 'Salvando…' : 'Iniciar atendimento'}
+            <Button size="sm" onClick={() => onOpenAttendance(appointment)}>
+              Iniciar atendimento
             </Button>
           )}
           {appointment.status === 'IN_PROGRESS' && (
-            <Button size="sm" disabled={saving} onClick={() => runStatus('COMPLETED')}>
-              {saving ? 'Salvando…' : 'Concluir atendimento'}
+            <Button size="sm" onClick={() => onOpenAttendance(appointment)}>
+              Abrir atendimento
             </Button>
           )}
         </div>

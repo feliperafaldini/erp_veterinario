@@ -9,11 +9,13 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { Spinner } from '../components/ui/Spinner';
 import { AgendaBoard } from '../components/agenda/AgendaBoard';
 import { AppointmentDetailModal } from '../components/agenda/AppointmentDetailModal';
+import { ConsultationModal } from '../components/agenda/ConsultationModal';
 import { addDays, dayTitle, hourSlots, isOutsideHours, isSameDay, startOfDay } from '../lib/agenda';
 import type {
   Animal,
   Appointment,
   AppointmentStatus,
+  Consultation,
   TenantAnimalItem,
   VeterinarianLink,
 } from '../types';
@@ -25,6 +27,10 @@ export function DashboardPage() {
   const [day, setDay] = useState(() => startOfDay(new Date()));
   const [vetFilter, setVetFilter] = useState('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [attendance, setAttendance] = useState<{
+    appointment: Appointment;
+    consultation: Consultation | null;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const { error: toastError, success: toastSuccess } = useToast();
   const navigate = useNavigate();
@@ -97,6 +103,27 @@ export function DashboardPage() {
     },
     [toastError, toastSuccess]
   );
+
+  const openAttendance = useCallback(
+    async (appointment: Appointment) => {
+      setSelectedId(null);
+      try {
+        const all = await api.get<Consultation[]>('/consultations');
+        const existing =
+          all.find((c) => c.appointment?.id === appointment.id && c.status === 'OPEN') ?? null;
+        setAttendance({ appointment, consultation: existing });
+      } catch (err) {
+        toastError(err instanceof HttpError ? err.message : 'Erro ao abrir o atendimento');
+        setAttendance({ appointment, consultation: null });
+      }
+    },
+    [toastError]
+  );
+
+  const handleAttendanceSaved = useCallback((updated: Appointment) => {
+    setAppointments((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
+    setAttendance(null);
+  }, []);
 
   if (loading) {
     return (
@@ -203,8 +230,19 @@ export function DashboardPage() {
           setSelectedId(null);
           navigate(`/animais/${animalId}`);
         }}
+        onOpenAttendance={openAttendance}
         onStatusChange={handleStatusChange}
       />
+
+      {attendance && (
+        <ConsultationModal
+          appointment={attendance.appointment}
+          existing={attendance.consultation}
+          animal={animalById.get(attendance.appointment.animal.id)}
+          onClose={() => setAttendance(null)}
+          onSaved={handleAttendanceSaved}
+        />
+      )}
     </div>
   );
 }
