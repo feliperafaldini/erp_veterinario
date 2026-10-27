@@ -1,121 +1,101 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api } from '../lib/api';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { api, HttpError } from '../lib/api';
 import { useToast } from '../context/ToastContext';
 import { Button } from '../components/ui/Button';
-import { Badge } from '../components/ui/Badge';
 import { Card } from '../components/ui/Card';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Spinner } from '../components/ui/Spinner';
-import type { Appointment, Consultation } from '../types';
-
-const STATUS_LABEL: Record<Appointment['status'], string> = {
-  SCHEDULED: 'Agendado',
-  IN_PROGRESS: 'Em atendimento',
-  COMPLETED: 'Concluído',
-  CANCELLED: 'Cancelado',
-};
-
-const STATUS_VARIANT: Record<Appointment['status'], 'default' | 'warning' | 'success' | 'danger'> = {
-  SCHEDULED: 'default',
-  IN_PROGRESS: 'warning',
-  COMPLETED: 'success',
-  CANCELLED: 'danger',
-};
-
-const WEEKDAYS = [
-  'domingo',
-  'segunda-feira',
-  'terça-feira',
-  'quarta-feira',
-  'quinta-feira',
-  'sexta-feira',
-  'sábado',
-];
-
-const MONTHS = [
-  'janeiro',
-  'fevereiro',
-  'março',
-  'abril',
-  'maio',
-  'junho',
-  'julho',
-  'agosto',
-  'setembro',
-  'outubro',
-  'novembro',
-  'dezembro',
-];
-
-function startOfDay(date: Date): number {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
-}
-
-function dayLabel(date: Date, today: number): string {
-  const diff = Math.round((startOfDay(date) - today) / 86400000);
-  if (diff === 0) return 'Hoje';
-  if (diff === 1) return 'Amanhã';
-  if (diff === -1) return 'Ontem';
-  if (diff > 1 && diff <= 7) return WEEKDAYS[date.getDay()].replace('-feira', '');
-  return `${date.getDate()} de ${MONTHS[date.getMonth()]}`;
-}
-
-function timeLabel(iso: string): string {
-  const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-}
+import { AgendaBoard } from '../components/agenda/AgendaBoard';
+import { AppointmentDetailModal } from '../components/agenda/AppointmentDetailModal';
+import { addDays, dayTitle, hourSlots, isOutsideHours, isSameDay, startOfDay } from '../lib/agenda';
+import type {
+  Animal,
+  Appointment,
+  AppointmentStatus,
+  TenantAnimalItem,
+  VeterinarianLink,
+} from '../types';
 
 export function DashboardPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [consultations, setConsultations] = useState<Consultation[]>([]);
+  const [animals, setAnimals] = useState<TenantAnimalItem[]>([]);
+  const [vets, setVets] = useState<VeterinarianLink[]>([]);
+  const [day, setDay] = useState(() => startOfDay(new Date()));
+  const [vetFilter, setVetFilter] = useState('all');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const { error: toastError } = useToast();
+  const { error: toastError, success: toastSuccess } = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
-    Promise.all([api.get<Appointment[]>('/appointments'), api.get<Consultation[]>('/consultations')])
-      .then(([appointmentsData, consultationsData]) => {
-        setAppointments(appointmentsData);
-        setConsultations(consultationsData);
+    Promise.all([
+      api.get<Appointment[]>('/appointments'),
+      api.get<TenantAnimalItem[]>('/animals'),
+      api.get<VeterinarianLink[]>('/veterinarians').catch(() => [] as VeterinarianLink[]),
+    ])
+      .then(([appointmentList, animalLinks, vetLinks]) => {
+        setAppointments(appointmentList);
+        setAnimals(animalLinks);
+        setVets(vetLinks);
       })
       .catch((err: unknown) => {
-        toastError(err instanceof Error ? err.message : 'Erro ao carregar a agenda');
+        toastError(err instanceof HttpError ? err.message : 'Erro ao carregar a agenda');
       })
       .finally(() => setLoading(false));
   }, [toastError]);
 
-  const now = new Date();
-  const today = startOfDay(now);
+  const animalById = useMemo(() => {
+    const map = new Map<string, Animal>();
+    for (const link of animals) map.set(link.animal.id, link.animal);
+    return map;
+  }, [animals]);
 
-  const groups = useMemo(() => {
-    const map = new Map<number, Appointment[]>();
-    for (const appointment of appointments) {
-      const key = startOfDay(new Date(appointment.scheduledAt));
-      const list = map.get(key) ?? [];
-      list.push(appointment);
-      map.set(key, list);
-    }
-    return [...map.entries()]
-      .sort((a, b) => a[0] - b[0])
-      .map(([key, items]) => ({
-        key,
-        label: dayLabel(new Date(key), today),
-        items: items.sort(
-          (a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()
-        ),
-      }));
-  }, [appointments, today]);
+  const today = startOfDay(new Date());
+  const isToday = isSameDay(day, today);
 
-  const todayItems = groups.find((g) => g.key === today)?.items ?? [];
-  const inProgress = todayItems.filter((a) => a.status === 'IN_PROGRESS').length;
-  const pendingToday = todayItems.filter((a) => a.status === 'SCHEDULED').length;
-  const latestConsultations = useMemo(
+  const dayAppointments = useMemo(
     () =>
-      [...consultations]
-        .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime())
-        .slice(0, 4),
-    [consultations]
+      appointments
+        .filter((appointment) => isSameDay(new Date(appointment.scheduledAt), day))
+        .filter((appointment) => vetFilter === 'all' || appointment.veterinarian?.id === vetFilter)
+        .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()),
+    [appointments, day, vetFilter]
+  );
+
+  const hours = useMemo(() => hourSlots(dayAppointments), [dayAppointments]);
+  const insideAppointments = useMemo(
+    () => dayAppointments.filter((a) => !isOutsideHours(a.scheduledAt)),
+    [dayAppointments]
+  );
+  const outsideAppointments = useMemo(
+    () => dayAppointments.filter((a) => isOutsideHours(a.scheduledAt)),
+    [dayAppointments]
+  );
+  const pending = dayAppointments.filter((a) => a.status === 'SCHEDULED').length;
+  const inProgress = dayAppointments.filter((a) => a.status === 'IN_PROGRESS').length;
+
+  const selected = selectedId ? appointments.find((a) => a.id === selectedId) ?? null : null;
+  const selectedAnimal = selected ? animalById.get(selected.animal.id) : undefined;
+
+  const handleStatusChange = useCallback(
+    async (appointment: Appointment, status: AppointmentStatus) => {
+      try {
+        const updated = await api.patch<Appointment>(`/appointments/${appointment.id}`, { status });
+        setAppointments((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
+        toastSuccess(
+          status === 'IN_PROGRESS'
+            ? 'Atendimento iniciado'
+            : status === 'COMPLETED'
+              ? 'Atendimento concluído'
+              : 'Agendamento cancelado'
+        );
+      } catch (err) {
+        toastError(err instanceof HttpError ? err.message : 'Erro ao atualizar o agendamento');
+      }
+    },
+    [toastError, toastSuccess]
   );
 
   if (loading) {
@@ -128,124 +108,101 @@ export function DashboardPage() {
 
   return (
     <div>
-      <div className="flex items-start justify-between gap-4 mb-1">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-page font-semibold text-ink">Hoje</h1>
-          <p className="text-meta text-ink-3 mt-0.5">
-            {WEEKDAYS[now.getDay()]}, {now.getDate()} de {MONTHS[now.getMonth()]}
-          </p>
-        </div>
-        <Button onClick={() => navigate('/agendamentos')}>Novo agendamento</Button>
-      </div>
-
-      <div className="mt-4 mb-6 flex items-center gap-3 text-meta text-ink-3">
-        <span className="num text-ink-2 font-medium">
-          {todayItems.length} {todayItems.length === 1 ? 'atendimento' : 'atendimentos'}
-        </span>
-        <span aria-hidden className="h-3 w-px bg-line-strong" />
-        <span>{pendingToday} aguardando</span>
-        <span aria-hidden className="h-3 w-px bg-line-strong" />
-        <span>{inProgress} em atendimento</span>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_300px] gap-6 items-start">
-        <Card>
-          {groups.length === 0 ? (
-            <EmptyState
-              title="Nada agendado"
-              description="A agenda está vazia. Crie um agendamento para começar o dia."
-              action={<Button onClick={() => navigate('/agendamentos')}>Novo agendamento</Button>}
-            />
-          ) : (
-            <div>
-              {groups.map((group, groupIndex) => (
-                <section key={group.key}>
-                  <div
-                    className={`flex items-baseline justify-between px-5 py-2.5 ${
-                      groupIndex === 0 ? '' : 'border-t border-line'
-                    } bg-[#fbfbfc]`}
-                  >
-                    <h2 className="text-micro uppercase tracking-[0.06em] text-ink-4 font-medium">
-                      {group.label}
-                    </h2>
-                    <span className="num text-meta text-ink-4">{group.items.length}</span>
-                  </div>
-                  <ul>
-                    {group.items.map((appointment) => (
-                      <li
-                        key={appointment.id}
-                        className="row-hover flex items-center gap-4 px-5 py-3 border-t border-line first:border-t-0"
-                      >
-                        <time
-                          dateTime={appointment.scheduledAt}
-                          className="num text-meta text-ink-3 w-11 shrink-0"
-                        >
-                          {timeLabel(appointment.scheduledAt)}
-                        </time>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-body font-medium text-ink truncate">
-                              {appointment.animal?.name ?? appointment.animal?.internalCode}
-                            </span>
-                            <span className="num text-micro text-ink-4 shrink-0">
-                              {appointment.animal?.internalCode}
-                            </span>
-                          </div>
-                          <p className="text-meta text-ink-3 truncate">
-                            {appointment.tutor?.tutorIdentity?.name ?? 'Tutor não informado'}
-                            {appointment.reason ? ` · ${appointment.reason}` : ''}
-                          </p>
-                        </div>
-                        <Badge variant={STATUS_VARIANT[appointment.status]}>
-                          {STATUS_LABEL[appointment.status]}
-                        </Badge>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              ))}
+          <div className="flex items-center gap-2">
+            <h1 className="text-page font-semibold text-ink">Agenda</h1>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                aria-label="Dia anterior"
+                onClick={() => setDay((d) => addDays(d, -1))}
+                className="h-7 w-7 grid place-items-center rounded-md border border-line text-ink-3 hover:bg-[#f2f2f4] hover:text-ink"
+              >
+                <ChevronLeft size={16} strokeWidth={1.75} />
+              </button>
+              <button
+                type="button"
+                aria-label="Próximo dia"
+                onClick={() => setDay((d) => addDays(d, 1))}
+                className="h-7 w-7 grid place-items-center rounded-md border border-line text-ink-3 hover:bg-[#f2f2f4] hover:text-ink"
+              >
+                <ChevronRight size={16} strokeWidth={1.75} />
+              </button>
+              {!isToday && (
+                <button
+                  type="button"
+                  onClick={() => setDay(today)}
+                  className="h-7 px-2 rounded-md text-meta text-ink-2 hover:bg-[#f2f2f4] hover:text-ink"
+                >
+                  Hoje
+                </button>
+              )}
             </div>
-          )}
-        </Card>
-
-        <Card>
-          <div className="px-5 py-3 border-b border-line">
-            <h2 className="text-micro uppercase tracking-[0.06em] text-ink-4 font-medium">
-              Últimas consultas
-            </h2>
           </div>
-          {latestConsultations.length === 0 ? (
-            <p className="px-5 py-6 text-meta text-ink-3">Nenhuma consulta registrada ainda.</p>
-          ) : (
-            <ul>
-              {latestConsultations.map((consultation) => (
-                <li key={consultation.id} className="px-5 py-3 border-t border-line first:border-t-0">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <span className="text-body font-medium text-ink truncate">
-                      {consultation.animal?.name ?? consultation.animal?.internalCode}
-                    </span>
-                    <time
-                      dateTime={consultation.startedAt}
-                      className="num text-micro text-ink-4 shrink-0"
-                    >
-                      {new Date(consultation.startedAt).toLocaleDateString('pt-BR', {
-                        day: '2-digit',
-                        month: '2-digit',
-                      })}
-                    </time>
-                  </div>
-                  <p className="text-meta text-ink-3 truncate">
-                    {consultation.chiefComplaint ?? 'Sem queixa registrada'}
-                  </p>
-                  <p className="text-micro text-ink-4 truncate">
-                    {consultation.veterinarian?.veterinarian?.name ?? 'Veterinário não informado'}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
+          <p className="text-meta text-ink-3 mt-0.5 first-letter:uppercase">{dayTitle(day)}</p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <select
+            aria-label="Filtrar por veterinário"
+            value={vetFilter}
+            onChange={(e) => setVetFilter(e.target.value)}
+            className="h-9 rounded-md border border-line-strong bg-surface px-2.5 text-body text-ink-2 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent-ring"
+          >
+            <option value="all">Todos os veterinários</option>
+            {vets.map((link) => (
+              <option key={link.id} value={link.id}>
+                {link.veterinarian.name}
+              </option>
+            ))}
+          </select>
+          <Button onClick={() => navigate('/agendamentos')}>Novo agendamento</Button>
+        </div>
       </div>
+
+      {dayAppointments.length > 0 && (
+        <div className="mt-4 mb-5 flex items-center gap-3 text-meta text-ink-3">
+          <span className="num text-ink-2 font-medium">
+            {dayAppointments.length} {dayAppointments.length === 1 ? 'atendimento' : 'atendimentos'}
+          </span>
+          <span aria-hidden className="h-3 w-px bg-line-strong" />
+          <span>{pending} aguardando</span>
+          <span aria-hidden className="h-3 w-px bg-line-strong" />
+          <span>{inProgress} em atendimento</span>
+        </div>
+      )}
+
+      {dayAppointments.length === 0 ? (
+        <Card>
+          <EmptyState
+            title="Nada agendado para este dia"
+            description="A agenda está vazia. Crie um agendamento para começar."
+            action={<Button onClick={() => navigate('/agendamentos')}>Novo agendamento</Button>}
+          />
+        </Card>
+      ) : (
+        <AgendaBoard
+          hours={hours}
+          appointments={insideAppointments}
+          outside={outsideAppointments}
+          animalById={animalById}
+          currentHour={isToday ? new Date().getHours() : null}
+          showVet={vetFilter === 'all'}
+          onOpen={(appointment) => setSelectedId(appointment.id)}
+        />
+      )}
+
+      <AppointmentDetailModal
+        appointment={selected}
+        animal={selectedAnimal}
+        onClose={() => setSelectedId(null)}
+        onOpenRecord={(animalId) => {
+          setSelectedId(null);
+          navigate(`/animais/${animalId}`);
+        }}
+        onStatusChange={handleStatusChange}
+      />
     </div>
   );
 }
