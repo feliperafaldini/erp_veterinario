@@ -12,9 +12,6 @@ export const ROLE_LABEL: Record<string, string> = {
 };
 
 /** Página inicial de cada papel. */
-export function homePath(roles: string[]): string {
-  const role = primaryRole(roles);
-  if (role === 'ADMIN') return '/admin';
-  if (role === 'RECEPTIONIST') return '/recepcao';
-  return '/dashboard';
+export function homePath(_roles: string[]): string {
+  return '/inicio';
 }

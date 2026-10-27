@@ -5,6 +5,7 @@ import { ROLE_LABEL, primaryRole } from '../lib/roles';
 import {
   CalendarDays,
   ClipboardList,
+  Home,
   LayoutDashboard,
   LogOut,
   Package,
@@ -17,6 +18,7 @@ import {
 type NavItem = { to: string; label: string; icon: typeof LayoutDashboard };
 
 const VET_NAV: NavItem[] = [
+  { to: '/inicio', label: 'Início', icon: Home },
   { to: '/dashboard', label: 'Agenda', icon: LayoutDashboard },
   { to: '/tutores', label: 'Tutores', icon: Users },
   { to: '/animais', label: 'Animais', icon: PawPrint },
@@ -24,6 +26,7 @@ const VET_NAV: NavItem[] = [
 ];
 
 const RECEPTION_NAV: NavItem[] = [
+  { to: '/inicio', label: 'Início', icon: Home },
   { to: '/recepcao', label: 'Recepção', icon: ClipboardList },
   { to: '/agendamentos', label: 'Agendamentos', icon: CalendarDays },
   { to: '/tutores', label: 'Tutores', icon: Users },
@@ -31,6 +34,7 @@ const RECEPTION_NAV: NavItem[] = [
 ];
 
 const ADMIN_NAV: NavItem[] = [
+  { to: '/inicio', label: 'Início', icon: Home },
   { to: '/admin', label: 'Painel', icon: LayoutDashboard },
   { to: '/admin/equipe', label: 'Equipe', icon: UserCog },
   { to: '/admin/estoque', label: 'Estoque', icon: Package },
