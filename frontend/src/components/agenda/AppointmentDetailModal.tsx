@@ -67,7 +67,7 @@ export function AppointmentDetailModal({
           animal={animal}
           name={appointment.animal.name}
           code={appointment.animal.internalCode}
-          size={44}
+          size={52}
         />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">

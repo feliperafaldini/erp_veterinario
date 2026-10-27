@@ -17,6 +17,13 @@ const STATUS_DOT: Record<AppointmentStatus, string> = {
   CANCELLED: 'bg-state-cancelled',
 };
 
+const STATUS_TONE: Record<AppointmentStatus, string> = {
+  SCHEDULED: 'bg-[#f2f2f4] text-ink-2',
+  IN_PROGRESS: 'bg-[#fdf3e3] text-state-progress',
+  COMPLETED: 'bg-accent-soft text-state-done',
+  CANCELLED: 'bg-[#fbedeb] text-state-cancelled',
+};
+
 function monogram(name: string | null | undefined, code: string): string {
   const source = (name || code || '').trim();
   const parts = source.split(/\s+/).filter(Boolean);
@@ -29,7 +36,7 @@ export function AnimalAvatar({
   animal,
   name,
   code,
-  size = 36,
+  size = 64,
 }: {
   animal?: Animal;
   name: string | null | undefined;
@@ -47,7 +54,7 @@ export function AnimalAvatar({
         width={size}
         height={size}
         onError={() => setFailed(true)}
-        className="shrink-0 rounded-md object-cover bg-[#f2f2f4]"
+        className="shrink-0 rounded-lg object-cover bg-[#f2f2f4]"
         style={{ width: size, height: size }}
       />
     );
@@ -56,7 +63,7 @@ export function AnimalAvatar({
   return (
     <span
       aria-hidden
-      className="shrink-0 rounded-md bg-[#f2f2f4] text-ink-2 grid place-items-center font-semibold"
+      className="shrink-0 rounded-lg bg-[#f2f2f4] text-ink-2 grid place-items-center font-semibold"
       style={{ width: size, height: size, fontSize: Math.round(size * 0.32) }}
     >
       {monogram(name, code)}
@@ -85,33 +92,38 @@ export function AppointmentCard({ appointment, animal, showVet = false, onOpen }
       onClick={() => onOpen(appointment)}
       aria-label={`${timeLabel(appointment.scheduledAt)} — ${name}, ${STATUS_LABEL[appointment.status]}`}
       className={cn(
-        'w-full text-left rounded-md border bg-surface px-3 py-2.5',
+        'w-full text-left rounded-lg border bg-surface p-4',
         'transition-colors duration-150 hover:bg-[#fbfbfc] hover:border-line-strong',
         appointment.status === 'IN_PROGRESS' ? 'border-[#e6d3b8]' : 'border-line',
         cancelled && 'opacity-60'
       )}
     >
-      <div className="flex items-start gap-2.5">
+      <div className="flex items-start gap-4">
         <AnimalAvatar animal={animal} name={appointment.animal.name} code={appointment.animal.internalCode} />
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-2">
-            <span className={cn('text-body font-medium text-ink truncate', cancelled && 'line-through')}>
+            <span className={cn('text-title font-semibold text-ink truncate', cancelled && 'line-through')}>
               {name}
             </span>
-            <span className="num text-micro text-ink-4 shrink-0">
+            <span className="num text-lead text-ink-2 shrink-0">
               {timeLabel(appointment.scheduledAt)}
             </span>
           </div>
-          <p className="text-meta text-ink-3 line-clamp-2">{description}</p>
-          <p className="text-micro text-ink-4 truncate">{thirdLine}</p>
+          <p className="text-lead text-ink-2 leading-6 line-clamp-2 mt-1">{description}</p>
+          <p className="text-body text-ink-3 truncate mt-0.5">{thirdLine}</p>
         </div>
       </div>
-      <div className="mt-2 flex items-center justify-between gap-2">
-        <span className="flex items-center gap-1.5 whitespace-nowrap">
-          <span aria-hidden className={cn('h-1.5 w-1.5 rounded-full', STATUS_DOT[appointment.status])} />
-          <span className="text-micro text-ink-3">{STATUS_LABEL[appointment.status]}</span>
+      <div className="mt-3.5 flex items-center justify-between gap-2">
+        <span
+          className={cn(
+            'inline-flex items-center gap-2 rounded-md px-3 py-1 text-body font-medium',
+            STATUS_TONE[appointment.status]
+          )}
+        >
+          <span aria-hidden className={cn('h-2 w-2 rounded-full', STATUS_DOT[appointment.status])} />
+          {STATUS_LABEL[appointment.status]}
         </span>
-        <span className="num text-micro text-ink-4 whitespace-nowrap">{appointment.animal.internalCode}</span>
+        <span className="num text-body text-ink-3">{appointment.animal.internalCode}</span>
       </div>
     </button>
   );

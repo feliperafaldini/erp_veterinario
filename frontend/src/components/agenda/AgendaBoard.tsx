@@ -4,7 +4,7 @@ import { groupByHour, hourLabel } from '../../lib/agenda';
 import { AppointmentCard } from './AppointmentCard';
 import type { Animal, Appointment } from '../../types';
 
-const COLUMN_WIDTH = 212;
+const COLUMN_WIDTH = 300;
 const DRAG_THRESHOLD = 5;
 const MIN_THUMB_WIDTH = 40;
 
@@ -209,7 +209,7 @@ export function AgendaBoard({
               <section
                 key={hour}
                 aria-label={`Horário ${hourLabel(hour)}`}
-                className={cn('w-[212px] shrink-0 px-2 h-full', index > 0 && 'border-l border-line')}
+                className={cn('w-[300px] shrink-0 px-2 h-full', index > 0 && 'border-l border-line')}
               >
                 <header
                   className={cn(
@@ -217,7 +217,7 @@ export function AgendaBoard({
                     isNow && 'bg-accent-soft px-2'
                   )}
                 >
-                  <span className={cn('num text-meta font-medium', isNow ? 'text-accent' : 'text-ink-2')}>
+                  <span className={cn('num text-lead font-medium', isNow ? 'text-accent' : 'text-ink-2')}>
                     {hourLabel(hour)}
                   </span>
                   <span className="num text-micro text-ink-4">{items.length > 0 ? items.length : ''}</span>
@@ -240,7 +240,7 @@ export function AgendaBoard({
           {outside.length > 0 && (
             <section
               aria-label="Fora do horário"
-              className="w-[212px] shrink-0 px-2 border-l border-line h-full"
+              className="w-[300px] shrink-0 px-2 border-l border-line h-full"
             >
               <header className="h-9 flex items-center justify-between gap-2 px-1">
                 <span className="text-micro uppercase tracking-[0.06em] text-ink-4 font-medium">
