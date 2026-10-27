@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { api, HttpError } from '../lib/api';
 import { useToast } from '../context/ToastContext';
 import { Button } from '../components/ui/Button';
@@ -30,6 +30,36 @@ const STATUS_VARIANT: Record<AppointmentStatus, 'default' | 'warning' | 'success
   CANCELLED: 'danger',
 };
 
+type Period = 'today' | 'next7' | 'next30' | 'past' | 'all';
+
+const PERIODS: { value: Period; label: string }[] = [
+  { value: 'today', label: 'Hoje' },
+  { value: 'next7', label: 'Próximos 7 dias' },
+  { value: 'next30', label: 'Próximos 30 dias' },
+  { value: 'past', label: 'Passados' },
+  { value: 'all', label: 'Todos' },
+];
+
+const PAGE_SIZES = [10, 20, 50];
+
+function periodRange(period: Period): { start?: number; end?: number } {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const day = 86400000;
+  switch (period) {
+    case 'today':
+      return { start: today, end: today + day };
+    case 'next7':
+      return { start: today, end: today + 7 * day };
+    case 'next30':
+      return { start: today, end: today + 30 * day };
+    case 'past':
+      return { end: today };
+    default:
+      return {};
+  }
+}
+
 function formatDateTime(value?: string | null) {
   if (!value) return '—';
   const d = new Date(value);
@@ -55,6 +85,9 @@ export function AppointmentsPage() {
   const [tutors, setTutors] = useState<Tutor[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [period, setPeriod] = useState<Period>('all');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const { error: toastError } = useToast();
 
   const fetchData = useCallback(() => {
@@ -80,6 +113,38 @@ export function AppointmentsPage() {
     fetchData();
   }, [fetchData]);
 
+  const filtered = useMemo(() => {
+    const { start, end } = periodRange(period);
+    return appointments
+      .filter((appointment) => {
+        const time = new Date(appointment.scheduledAt).getTime();
+        if (start !== undefined && time < start) return false;
+        if (end !== undefined && time >= end) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        const diff =
+          new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime();
+        return period === 'past' ? -diff : diff;
+      });
+  }, [appointments, period]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pageItems = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const firstItem = filtered.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const lastItem = Math.min(currentPage * pageSize, filtered.length);
+
+  const changePeriod = (value: Period) => {
+    setPeriod(value);
+    setPage(1);
+  };
+
+  const changePageSize = (value: number) => {
+    setPageSize(value);
+    setPage(1);
+  };
+
   const handleStatusChange = async (id: string, status: AppointmentStatus) => {
     try {
       await api.patch(`/appointments/${id}`, { status });
@@ -89,11 +154,13 @@ export function AppointmentsPage() {
     }
   };
 
+  const periodLabel = PERIODS.find((p) => p.value === period)?.label ?? 'Todos';
+
   return (
     <div>
       <PageHeader
         title="Agendamentos"
-        subtitle={`${appointments.length} agendamento(s)`}
+        subtitle={`${filtered.length} no período · ${periodLabel}`}
         actions={
           <Button onClick={() => setShowForm(!showForm)}>
             {showForm ? 'Cancelar' : 'Novo Agendamento'}
@@ -119,13 +186,39 @@ export function AppointmentsPage() {
         </Card>
       )}
 
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <label htmlFor="periodo" className="text-meta text-ink-3">
+          Período
+        </label>
+        <select
+          id="periodo"
+          value={period}
+          onChange={(e) => changePeriod(e.target.value as Period)}
+          className="h-9 rounded-md border border-line-strong bg-surface px-2.5 text-body text-ink-2 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent-ring"
+        >
+          {PERIODS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        {loading && <Spinner size="sm" />}
+      </div>
+
       {loading ? (
         <div className="flex justify-center py-12">
           <Spinner size="lg" />
         </div>
-      ) : appointments.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <Card>
-          <EmptyState title="Nenhum agendamento" description="Agende uma consulta." />
+          <EmptyState
+            title="Nenhum agendamento no período"
+            description={
+              appointments.length === 0
+                ? 'Agende uma consulta.'
+                : 'Troque o período para ver outros agendamentos.'
+            }
+          />
         </Card>
       ) : (
         <Card>
@@ -143,7 +236,7 @@ export function AppointmentsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
-                {appointments.map((appt) => (
+                {pageItems.map((appt) => (
                   <tr key={appt.id} className="hover:bg-[#fbfbfc]">
                     <td className="px-4 py-3 text-body whitespace-nowrap">{formatDateTime(appt.scheduledAt)}</td>
                     <td className="px-4 py-3 text-body font-medium">{appt.animal?.name || '—'}</td>
@@ -175,6 +268,48 @@ export function AppointmentsPage() {
               </tbody>
             </table>
           </CardBody>
+
+          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-line">
+            <span className="text-meta text-ink-3">
+              Mostrando {firstItem}–{lastItem} de {filtered.length}
+            </span>
+            <div className="flex items-center gap-2">
+              <label htmlFor="page-size" className="text-meta text-ink-4">
+                Por página
+              </label>
+              <select
+                id="page-size"
+                value={pageSize}
+                onChange={(e) => changePageSize(Number(e.target.value))}
+                className="h-8 rounded-md border border-line-strong bg-surface px-2 text-meta text-ink-2"
+              >
+                {PAGE_SIZES.map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={currentPage <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                Anterior
+              </Button>
+              <span className="num text-meta text-ink-3">
+                {currentPage} / {totalPages}
+              </span>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={currentPage >= totalPages}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              >
+                Próxima
+              </Button>
+            </div>
+          </div>
         </Card>
       )}
     </div>
