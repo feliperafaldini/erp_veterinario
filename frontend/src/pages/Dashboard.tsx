@@ -64,7 +64,7 @@ export function DashboardPage() {
     [appointments, day, vetFilter]
   );
 
-  const hours = useMemo(() => hourSlots(dayAppointments), [dayAppointments]);
+  const hours = useMemo(() => hourSlots(), []);
   const insideAppointments = useMemo(
     () => dayAppointments.filter((a) => !isOutsideHours(a.scheduledAt)),
     [dayAppointments]
@@ -107,7 +107,7 @@ export function DashboardPage() {
   }
 
   return (
-    <div>
+    <div className="flex flex-col min-h-[calc(100vh-56px)]">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
@@ -174,7 +174,7 @@ export function DashboardPage() {
       )}
 
       {dayAppointments.length === 0 ? (
-        <Card>
+        <Card className="flex-1 grid place-items-center">
           <EmptyState
             title="Nada agendado para este dia"
             description="A agenda está vazia. Crie um agendamento para começar."
@@ -182,15 +182,17 @@ export function DashboardPage() {
           />
         </Card>
       ) : (
-        <AgendaBoard
-          hours={hours}
-          appointments={insideAppointments}
-          outside={outsideAppointments}
-          animalById={animalById}
-          currentHour={isToday ? new Date().getHours() : null}
-          showVet={vetFilter === 'all'}
-          onOpen={(appointment) => setSelectedId(appointment.id)}
-        />
+        <div className="flex-1 flex min-h-0">
+          <AgendaBoard
+            hours={hours}
+            appointments={insideAppointments}
+            outside={outsideAppointments}
+            animalById={animalById}
+            currentHour={isToday ? new Date().getHours() : null}
+            showVet={vetFilter === 'all'}
+            onOpen={(appointment) => setSelectedId(appointment.id)}
+          />
+        </div>
       )}
 
       <AppointmentDetailModal

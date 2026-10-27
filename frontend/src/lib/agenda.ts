@@ -64,21 +64,13 @@ export function hourLabel(hour: number): string {
 }
 
 /**
- * Horas do quadro: 7h–19h. Com agendamentos no horário comercial, aperta o
- * range para o primeiro..último horário ocupado (menos colunas vazias).
+ * Horas do quadro: sempre 7h–19h. A grade fixa é o que faz o quadro parecer
+ * agenda mesmo em dia com um único atendimento; horários fora vão para a
+ * coluna extra "Fora do horário".
  */
-export function hourSlots(items: { scheduledAt: string }[] = []): number[] {
-  let first = SLOT_START_HOUR;
-  let last = SLOT_END_HOUR;
-  const occupied = items
-    .map((item) => new Date(item.scheduledAt).getHours())
-    .filter((hour) => hour >= SLOT_START_HOUR && hour <= SLOT_END_HOUR);
-  if (occupied.length > 0) {
-    first = Math.min(...occupied);
-    last = Math.max(...occupied);
-  }
+export function hourSlots(): number[] {
   const slots: number[] = [];
-  for (let hour = first; hour <= last; hour += 1) slots.push(hour);
+  for (let hour = SLOT_START_HOUR; hour <= SLOT_END_HOUR; hour += 1) slots.push(hour);
   return slots;
 }
 

@@ -126,10 +126,8 @@ export function AgendaBoard({
     const target = currentHour !== null && hours.includes(currentHour) ? currentHour : firstOccupied;
     const index =
       target !== undefined ? Math.max(0, hours.indexOf(target) - 1) : outside.length > 0 ? hours.length : 0;
-    if (index > 0) {
-      container.scrollLeft = index * COLUMN_WIDTH;
-      updateMetrics();
-    }
+    container.scrollLeft = index * COLUMN_WIDTH;
+    updateMetrics();
   }, [hours, appointments, outside, currentHour, updateMetrics]);
 
   const hasOverflow = metrics.scrollWidth > metrics.clientWidth + 1;
@@ -187,7 +185,7 @@ export function AgendaBoard({
   };
 
   return (
-    <div className="-mx-2">
+    <div className="-mx-2 flex-1 flex flex-col min-h-0 rounded-lg border border-line bg-surface overflow-hidden">
       <div
         ref={scrollerRef}
         onPointerDown={handlePointerDown}
@@ -199,11 +197,11 @@ export function AgendaBoard({
           }
         }}
         className={cn(
-          'overflow-x-auto pb-2 hide-scrollbar',
+          'flex-1 min-h-0 overflow-auto hide-scrollbar',
           dragging ? 'cursor-grabbing select-none' : 'cursor-grab'
         )}
       >
-        <div className="flex min-w-max items-start px-2">
+        <div className="flex min-w-max items-stretch h-full px-2">
           {hours.map((hour, index) => {
             const items = byHour.get(hour) ?? [];
             const isNow = currentHour === hour;
@@ -211,7 +209,7 @@ export function AgendaBoard({
               <section
                 key={hour}
                 aria-label={`Horário ${hourLabel(hour)}`}
-                className={cn('w-[212px] shrink-0 px-2', index > 0 && 'border-l border-line')}
+                className={cn('w-[212px] shrink-0 px-2 h-full', index > 0 && 'border-l border-line')}
               >
                 <header
                   className={cn(
@@ -240,7 +238,10 @@ export function AgendaBoard({
           })}
 
           {outside.length > 0 && (
-            <section aria-label="Fora do horário" className="w-[212px] shrink-0 px-2 border-l border-line">
+            <section
+              aria-label="Fora do horário"
+              className="w-[212px] shrink-0 px-2 border-l border-line h-full"
+            >
               <header className="h-9 flex items-center justify-between gap-2 px-1">
                 <span className="text-micro uppercase tracking-[0.06em] text-ink-4 font-medium">
                   Fora do horário
@@ -267,7 +268,7 @@ export function AgendaBoard({
         <div
           ref={trackRef}
           onPointerDown={handleTrackPointerDown}
-          className="mx-2 mt-2 h-4 rounded-full bg-[#efeff2] cursor-pointer"
+          className="mx-3 my-2 h-4 rounded-full bg-[#efeff2] cursor-pointer"
           aria-hidden
         >
           <div
