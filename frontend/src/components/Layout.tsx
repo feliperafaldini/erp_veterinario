@@ -1,13 +1,43 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, Users, PawPrint, CalendarDays, LogOut } from 'lucide-react';
+import { ROLE_LABEL, primaryRole } from '../lib/roles';
+import {
+  CalendarDays,
+  ClipboardList,
+  LayoutDashboard,
+  LogOut,
+  Package,
+  PawPrint,
+  UserCog,
+  Users,
+  Wallet,
+} from 'lucide-react';
 
-const navItems = [
-  { to: '/dashboard', label: 'Hoje', icon: LayoutDashboard },
+type NavItem = { to: string; label: string; icon: typeof LayoutDashboard };
+
+const VET_NAV: NavItem[] = [
+  { to: '/dashboard', label: 'Agenda', icon: LayoutDashboard },
   { to: '/tutores', label: 'Tutores', icon: Users },
   { to: '/animais', label: 'Animais', icon: PawPrint },
   { to: '/agendamentos', label: 'Agendamentos', icon: CalendarDays },
+];
+
+const RECEPTION_NAV: NavItem[] = [
+  { to: '/recepcao', label: 'Recepção', icon: ClipboardList },
+  { to: '/agendamentos', label: 'Agendamentos', icon: CalendarDays },
+  { to: '/tutores', label: 'Tutores', icon: Users },
+  { to: '/animais', label: 'Animais', icon: PawPrint },
+];
+
+const ADMIN_NAV: NavItem[] = [
+  { to: '/admin', label: 'Painel', icon: LayoutDashboard },
+  { to: '/admin/equipe', label: 'Equipe', icon: UserCog },
+  { to: '/admin/estoque', label: 'Estoque', icon: Package },
+  { to: '/admin/custos', label: 'Custos', icon: Wallet },
+  { to: '/dashboard', label: 'Agenda', icon: CalendarDays },
+  { to: '/tutores', label: 'Tutores', icon: Users },
+  { to: '/animais', label: 'Animais', icon: PawPrint },
 ];
 
 function initials(value: string | undefined | null, fallback: string): string {
@@ -18,11 +48,20 @@ function initials(value: string | undefined | null, fallback: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
+function navForRole(role: string | null): NavItem[] {
+  if (role === 'ADMIN') return ADMIN_NAV;
+  if (role === 'RECEPTIONIST') return RECEPTION_NAV;
+  return VET_NAV;
+}
+
 export function AppLayout({ children }: { children: React.ReactNode }) {
-  const { user, activeTenant, logout } = useAuth();
+  const { user, activeTenant, roles, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
+
+  const role = primaryRole(roles);
+  const navItems = navForRole(role);
 
   const handleLogout = async () => {
     await logout();
@@ -57,7 +96,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
         <nav className="flex-1 px-2 py-3 space-y-0.5">
           {navItems.map((item) => {
-            const active = location.pathname.startsWith(item.to);
+            const active =
+              location.pathname === item.to ||
+              (item.to !== '/admin' && location.pathname.startsWith(`${item.to}/`));
             const Icon = item.icon;
             return (
               <Link
@@ -91,13 +132,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <span className="h-7 w-7 shrink-0 rounded-full bg-[#f2f2f4] text-ink-2 grid place-items-center text-[10px] font-semibold">
               {userInitials}
             </span>
-            <span
-              className={`flex-1 min-w-0 text-meta text-ink-2 truncate transition-opacity duration-150 ${
+            <div
+              className={`flex-1 min-w-0 transition-opacity duration-150 ${
                 expanded ? 'opacity-100 delay-75' : 'opacity-0'
               }`}
             >
-              {user?.name}
-            </span>
+              <p className="text-meta text-ink-2 truncate">{user?.name}</p>
+              <p className="text-micro text-ink-4 truncate">{role ? ROLE_LABEL[role] : ''}</p>
+            </div>
             <button
               onClick={handleLogout}
               title="Sair"

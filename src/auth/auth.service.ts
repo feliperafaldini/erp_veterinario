@@ -102,6 +102,55 @@ export class AuthService {
     };
   }
 
+  async me(userId: string, tenantId: string) {
+    const link = await this.prisma.userTenant.findUnique({
+      where: {
+        userId_tenantId: { userId, tenantId },
+      },
+      include: {
+        user: {
+          select: { id: true, name: true, email: true },
+        },
+        tenant: {
+          select: { id: true, name: true, logoUrl: true },
+        },
+        userTenantRoles: {
+          include: {
+            role: {
+              include: {
+                rolePermissions: {
+                  include: {
+                    permission: { select: { key: true } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!link || link.status !== 'ACTIVE') {
+      throw new ForbiddenException('Access to this tenant is denied');
+    }
+
+    const roles = link.userTenantRoles.map((link) => link.role.name);
+    const permissions = [
+      ...new Set(
+        link.userTenantRoles.flatMap((link) =>
+          link.role.rolePermissions.map((rp) => rp.permission.key),
+        ),
+      ),
+    ].sort();
+
+    return {
+      user: link.user,
+      tenant: link.tenant,
+      roles,
+      permissions,
+    };
+  }
+
   async login(dto: LoginDto) {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },

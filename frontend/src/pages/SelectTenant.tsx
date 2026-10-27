@@ -3,24 +3,25 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { Card } from '../components/ui/Card';
+import { homePath } from '../lib/roles';
 import type { AuthTenant } from '../types';
 
 export function SelectTenantPage() {
   const [loading, setLoading] = useState(false);
-  const { tenants, selectTenant, isAuthenticated, selectionToken } = useAuth();
+  const { tenants, selectTenant, isAuthenticated, selectionToken, roles } = useAuth();
   const { success, error: toastError } = useToast();
   const navigate = useNavigate();
 
   // Já escolheu clínica (sessão ativa) ou nem fez login ainda.
-  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
+  if (isAuthenticated) return <Navigate to={homePath(roles)} replace />;
   if (!selectionToken) return <Navigate to="/login" replace />;
 
   const handleSelect = async (tenant: AuthTenant) => {
     setLoading(true);
     try {
-      await selectTenant(tenant.id);
+      const selectedRoles = await selectTenant(tenant.id);
       success(`Clínica "${tenant.name}" selecionada`);
-      navigate('/dashboard');
+      navigate(homePath(selectedRoles));
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro ao selecionar clínica';
       toastError(msg);

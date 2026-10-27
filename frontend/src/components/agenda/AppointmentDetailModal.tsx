@@ -3,6 +3,7 @@ import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { AnimalAvatar } from './AppointmentCard';
+import { useAuth } from '../../context/AuthContext';
 import { ageLabel, sexLabel, timeLabel } from '../../lib/agenda';
 import type { Animal, Appointment, AppointmentStatus } from '../../types';
 
@@ -47,6 +48,8 @@ export function AppointmentDetailModal({
   onStatusChange,
 }: AppointmentDetailModalProps) {
   const [saving, setSaving] = useState(false);
+  const { can } = useAuth();
+  const canStartAttendance = can('CONSULTATION_CREATE');
 
   if (!appointment) return null;
 
@@ -126,12 +129,12 @@ export function AppointmentDetailModal({
           <Button variant="secondary" size="sm" onClick={() => onOpenRecord(appointment.animal.id)}>
             Abrir prontuário
           </Button>
-          {appointment.status === 'SCHEDULED' && (
+          {canStartAttendance && appointment.status === 'SCHEDULED' && (
             <Button size="sm" onClick={() => onOpenAttendance(appointment)}>
               Iniciar atendimento
             </Button>
           )}
-          {appointment.status === 'IN_PROGRESS' && (
+          {canStartAttendance && appointment.status === 'IN_PROGRESS' && (
             <Button size="sm" onClick={() => onOpenAttendance(appointment)}>
               Abrir atendimento
             </Button>

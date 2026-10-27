@@ -56,6 +56,23 @@ export interface SelectTenantResponse {
   accessToken: string;
 }
 
+/** GET /auth/me — perfil da sessão com papéis e permissões efetivas. */
+export interface MeResponse {
+  user: AuthUser;
+  tenant: AuthTenant;
+  roles: string[];
+  permissions: string[];
+}
+
+export interface UserLink {
+  userId: string;
+  name: string;
+  email: string;
+  isActive: boolean;
+  status: 'ACTIVE' | 'SUSPENDED' | 'REVOKED';
+  roles: string[];
+}
+
 // ===== Referências aninhadas =====
 /** Animal resumido como aparece nos sub-recursos e em agendamentos/consultas. */
 export interface AnimalRef {

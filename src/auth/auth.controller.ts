@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Get,
   Post,
   Req,
   Res,
@@ -13,7 +14,10 @@ import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto, LoginDto, SelectTenantDto } from './dto';
 import { TenantSelectionGuard } from './guards/tenant-selection.guard';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { TenantGuard } from './guards/tenant.guard';
 import { UserId } from './decorators/user-id.decorator';
+import { TenantId } from './decorators/tenant-id.decorator';
 
 const REFRESH_TOKEN_COOKIE = 'refresh_token';
 const REFRESH_TOKEN_MAX_AGE_DAYS = 7;
@@ -32,6 +36,14 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
+  }
+
+  // Perfil da sessão: usuário, clínica ativa, papéis e permissões efetivas.
+  // É o que permite ao cliente adaptar navegação e ações ao papel.
+  @Get('me')
+  @UseGuards(JwtAuthGuard, TenantGuard)
+  me(@UserId() userId: string, @TenantId() tenantId: string) {
+    return this.authService.me(userId, tenantId);
   }
 
   @Post('select-tenant')

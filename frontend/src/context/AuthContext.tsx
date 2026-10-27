@@ -1,17 +1,6 @@
 import { useEffect, createContext, useContext, useState, useCallback, type ReactNode } from 'react';
 import { api, setAccessToken, setUnauthorizedHandler } from '../lib/api';
-import type { AuthUser, AuthTenant, LoginResponse } from '../types';
-
-const TENANT_STORAGE_KEY = 'erp.activeTenant';
-
-function readStoredTenant(): AuthTenant | null {
-  try {
-    const raw = localStorage.getItem(TENANT_STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as AuthTenant) : null;
-  } catch {
-    return null;
-  }
-}
+import type { AuthUser, AuthTenant, LoginResponse, MeResponse } from '../types';
 
 interface AuthState {
   user: AuthUser | null;
@@ -19,15 +8,18 @@ interface AuthState {
   activeTenant: AuthTenant | null;
   selectionToken: string | null;
   accessToken: string | null;
+  roles: string[];
+  permissions: string[];
   isAuthenticated: boolean;
   isLoading: boolean;
 }
 
 interface AuthContextValue extends AuthState {
   login: (email: string, password: string) => Promise<void>;
-  selectTenant: (tenantId: string) => Promise<void>;
+  selectTenant: (tenantId: string) => Promise<string[]>;
   logout: () => Promise<void>;
   refresh: () => Promise<boolean>;
+  can: (permission: string) => boolean;
 }
 
 const EMPTY_STATE: AuthState = {
@@ -36,6 +28,8 @@ const EMPTY_STATE: AuthState = {
   activeTenant: null,
   selectionToken: null,
   accessToken: null,
+  roles: [],
+  permissions: [],
   isAuthenticated: false,
   isLoading: false,
 };
@@ -45,31 +39,38 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({ ...EMPTY_STATE, isLoading: true });
 
+  const applyMe = useCallback((me: MeResponse, accessToken: string) => {
+    setState({
+      ...EMPTY_STATE,
+      user: me.user,
+      tenants: [me.tenant],
+      activeTenant: me.tenant,
+      accessToken,
+      roles: me.roles,
+      permissions: me.permissions,
+      isAuthenticated: true,
+      isLoading: false,
+    });
+  }, []);
+
   useEffect(() => {
     setUnauthorizedHandler(() => {
-      localStorage.removeItem(TENANT_STORAGE_KEY);
       setState({ ...EMPTY_STATE });
     });
     api
       .post<{ accessToken: string }>('/auth/refresh')
-      .then((data: { accessToken: string }) => {
+      .then(async (data: { accessToken: string }) => {
         setAccessToken(data.accessToken);
-        setState((s: AuthState) => ({
-          ...s,
-          accessToken: data.accessToken,
-          activeTenant: readStoredTenant(),
-          isAuthenticated: true,
-          isLoading: false,
-        }));
+        const me = await api.get<MeResponse>('/auth/me');
+        applyMe(me, data.accessToken);
       })
       .catch(() => {
         setState((s: AuthState) => ({ ...s, isLoading: false }));
       });
-  }, []);
+  }, [applyMe]);
 
   const login = useCallback(async (email: string, password: string) => {
     const data = await api.post<LoginResponse>('/auth/login', { email, password });
-    localStorage.removeItem(TENANT_STORAGE_KEY);
     setState({
       ...EMPTY_STATE,
       user: data.user,
@@ -86,18 +87,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         { tenantId },
         state.selectionToken
       );
-      const tenant = state.tenants.find((t) => t.id === tenantId) ?? null;
-      if (tenant) localStorage.setItem(TENANT_STORAGE_KEY, JSON.stringify(tenant));
       setAccessToken(data.accessToken);
-      setState((s: AuthState) => ({
-        ...s,
-        accessToken: data.accessToken,
-        activeTenant: tenant,
-        isAuthenticated: true,
-        selectionToken: null,
-      }));
+      const me = await api.get<MeResponse>('/auth/me');
+      applyMe(me, data.accessToken);
+      return me.roles;
     },
-    [state.selectionToken, state.tenants]
+    [state.selectionToken, applyMe]
   );
 
   const logout = useCallback(async () => {
@@ -107,7 +102,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // ignore
     }
     setAccessToken(null);
-    localStorage.removeItem(TENANT_STORAGE_KEY);
     setState({ ...EMPTY_STATE });
   }, []);
 
@@ -115,15 +109,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const data = await api.post<{ accessToken: string }>('/auth/refresh');
       setAccessToken(data.accessToken);
-      setState((s: AuthState) => ({ ...s, accessToken: data.accessToken, isAuthenticated: true }));
+      const me = await api.get<MeResponse>('/auth/me');
+      applyMe(me, data.accessToken);
       return true;
     } catch {
       return false;
     }
-  }, []);
+  }, [applyMe]);
+
+  const can = useCallback(
+    (permission: string) => state.permissions.includes(permission),
+    [state.permissions]
+  );
 
   return (
-    <AuthContext.Provider value={{ ...state, login, selectTenant, logout, refresh }}>
+    <AuthContext.Provider value={{ ...state, login, selectTenant, logout, refresh, can }}>
       {children}
     </AuthContext.Provider>
   );
