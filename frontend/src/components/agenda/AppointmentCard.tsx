@@ -36,7 +36,7 @@ export function AnimalAvatar({
   animal,
   name,
   code,
-  size = 64,
+  size = 80,
 }: {
   animal?: Animal;
   name: string | null | undefined;
