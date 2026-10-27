@@ -70,4 +70,14 @@
   .row-hover {
     @apply transition-colors duration-150 hover:bg-[#f6f6f7];
   }
+
+  /* O kanban usa uma barra de rolagem própria (arrastável, sempre visível);
+     a nativa fica oculta para não duplicar. */
+  .hide-scrollbar {
+    scrollbar-width: none;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }
