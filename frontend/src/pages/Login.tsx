@@ -39,7 +39,7 @@ export function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-[#fbfbfc] px-4">
       <Card className="w-full max-w-md p-8">
         <div className="text-center mb-8">
-          <h1 className="text-page font-semibold text-ink">VetClinic</h1>
+          <h1 className="text-page font-semibold text-ink">ERP Veterinário</h1>
           <p className="text-body text-ink-3 mt-2">Acesse sua conta</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">

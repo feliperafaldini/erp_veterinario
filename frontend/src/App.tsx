@@ -8,6 +8,7 @@ import { LoginPage } from './pages/Login';
 import { SelectTenantPage } from './pages/SelectTenant';
 import { DashboardPage } from './pages/Dashboard';
 import { HomePage } from './pages/Home';
+import { HomeCarouselPage } from './pages/HomeCarousel';
 import { ReceptionPage } from './pages/Reception';
 import { TutorsPage } from './pages/Tutores';
 import { TutorFormPage } from './pages/TutoresForm';
@@ -46,6 +47,15 @@ export default function App() {
             <Route path="/" element={<Page><RoleHome /></Page>} />
 
             <Route path="/inicio" element={<Page><HomePage /></Page>} />
+
+            <Route
+              path="/inicio-carrossel"
+              element={
+                <Page>
+                  <HomeCarouselPage />
+                </Page>
+              }
+            />
 
             <Route
               path="/dashboard"

@@ -5,6 +5,8 @@ import { ROLE_LABEL, primaryRole } from '../lib/roles';
 import {
   CalendarDays,
   ClipboardList,
+  Clock,
+  Gauge,
   Home,
   LayoutDashboard,
   LogOut,
@@ -18,15 +20,17 @@ import {
 type NavItem = { to: string; label: string; icon: typeof LayoutDashboard };
 
 const VET_NAV: NavItem[] = [
-  { to: '/inicio', label: 'Início', icon: Home },
-  { to: '/dashboard', label: 'Agenda', icon: LayoutDashboard },
+  { to: '/inicio-carrossel', label: 'Início', icon: Home },
+  { to: '/inicio', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/dashboard', label: 'Agenda', icon: Clock },
   { to: '/tutores', label: 'Tutores', icon: Users },
   { to: '/animais', label: 'Animais', icon: PawPrint },
   { to: '/agendamentos', label: 'Agendamentos', icon: CalendarDays },
 ];
 
 const RECEPTION_NAV: NavItem[] = [
-  { to: '/inicio', label: 'Início', icon: Home },
+  { to: '/inicio-carrossel', label: 'Início', icon: Home },
+  { to: '/inicio', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/recepcao', label: 'Recepção', icon: ClipboardList },
   { to: '/agendamentos', label: 'Agendamentos', icon: CalendarDays },
   { to: '/tutores', label: 'Tutores', icon: Users },
@@ -34,12 +38,13 @@ const RECEPTION_NAV: NavItem[] = [
 ];
 
 const ADMIN_NAV: NavItem[] = [
-  { to: '/inicio', label: 'Início', icon: Home },
-  { to: '/admin', label: 'Painel', icon: LayoutDashboard },
+  { to: '/inicio-carrossel', label: 'Início', icon: Home },
+  { to: '/inicio', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/admin', label: 'Painel', icon: Gauge },
   { to: '/admin/equipe', label: 'Equipe', icon: UserCog },
   { to: '/admin/estoque', label: 'Estoque', icon: Package },
   { to: '/admin/custos', label: 'Custos', icon: Wallet },
-  { to: '/dashboard', label: 'Agenda', icon: CalendarDays },
+  { to: '/dashboard', label: 'Agenda', icon: Clock },
   { to: '/tutores', label: 'Tutores', icon: Users },
   { to: '/animais', label: 'Animais', icon: PawPrint },
 ];
