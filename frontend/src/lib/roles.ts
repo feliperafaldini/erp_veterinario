@@ -13,5 +13,5 @@ export const ROLE_LABEL: Record<string, string> = {
 
 /** Página inicial de cada papel. */
 export function homePath(_roles: string[]): string {
-  return '/inicio';
+  return '/inicio-carrossel';
 }

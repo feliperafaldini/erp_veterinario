@@ -5,18 +5,19 @@ import { useToast } from '../context/ToastContext';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
+import { homePath } from '../lib/roles';
 
 export function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const { login, isAuthenticated, selectionToken } = useAuth();
+  const { login, isAuthenticated, selectionToken, roles } = useAuth();
   const { error: toastError } = useToast();
   const navigate = useNavigate();
 
   // Quem já tem sessão ou já passou pelo login não fica preso nesta tela.
-  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
+  if (isAuthenticated) return <Navigate to={homePath(roles)} replace />;
   if (selectionToken) return <Navigate to="/select-tenant" replace />;
 
   const handleSubmit = async (e: React.FormEvent) => {
