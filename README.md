@@ -4,6 +4,8 @@ Sistema de gestão veterinária desenvolvido como projeto acadêmico de Engenhar
 
 O projeto consiste em um ERP veterinário no modelo SaaS, permitindo que diferentes estabelecimentos veterinários utilizem a mesma aplicação com isolamento lógico de seus dados. A aplicação foi projetada com arquitetura modular, autenticação baseada em JWT, controle de acesso por funções (RBAC) e PostgreSQL como banco de dados relacional.
 
+[![CI](https://github.com/feliperafaldini/erp_veterinario/actions/workflows/ci.yml/badge.svg)](https://github.com/feliperafaldini/erp_veterinario/actions/workflows/ci.yml)
+
 > **Status:** Em desenvolvimento
 
 ## Sobre o projeto
@@ -328,8 +330,6 @@ A estrutura atual do repositório é organizada aproximadamente da seguinte form
 
 ```text
 erp_veterinario/
-├── .opencode/
-│   └── skills/
 ├── docs/
 ├── prisma/
 │   ├── migrations/
@@ -343,7 +343,6 @@ erp_veterinario/
 │   └── test/
 ├── .env
 ├── .gitignore
-├── AGENTS.md
 ├── nest-cli.json
 ├── package.json
 ├── tsconfig.json
@@ -480,20 +479,6 @@ docs/
 ├── architecture.md
 ├── business-rules.md
 └── domain-model.md
-```
-
-Além disso, o projeto possui:
-
-```text
-AGENTS.md
-```
-
-que contém orientações gerais para desenvolvimento e manutenção do projeto.
-
-As skills utilizadas pelo OpenCode ficam em:
-
-```text
-.opencode/skills/
 ```
 
 ## Status do desenvolvimento
