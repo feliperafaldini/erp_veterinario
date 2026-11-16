@@ -16,6 +16,7 @@ jobs:
           POSTGRES_USER: user
           POSTGRES_PASSWORD: password
           POSTGRES_DB: erp_veterinario
+          POSTGRES_INITDB_ARGS: "--locale=C"
         ports:
           - 5432:5432
         options: >-
