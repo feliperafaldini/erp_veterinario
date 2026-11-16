@@ -579,6 +579,4 @@ Além da implementação do sistema, o projeto busca aplicar conceitos de:
 
 ## Licença
 
-Este projeto foi desenvolvido para fins acadêmicos.
-
-A definição da licença de distribuição do código ainda será estabelecida conforme as necessidades do projeto e da instituição.
+Este projeto foi desenvolvido para fins acadêmicos e é distribuído sob a licença MIT. Consulte o arquivo [LICENSE](LICENSE) para mais detalhes.

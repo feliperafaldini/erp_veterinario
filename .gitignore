@@ -31,3 +31,7 @@ test-results/
 # Prisma
 *.db
 *.tsbuildinfo
+
+# Agent tooling
+.opencode/
+AGENTS.md
