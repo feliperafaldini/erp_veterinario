@@ -579,4 +579,4 @@ Além da implementação do sistema, o projeto busca aplicar conceitos de:
 
 ## Licença
 
-Este projeto foi desenvolvido para fins acadêmicos e é distribuído sob a licença MIT. Consulte o arquivo [LICENSE](LICENSE) para mais detalhes.
+Software proprietário — todos os direitos reservados. O código é visível apenas para avaliação; uso, cópia, modificação e distribuição exigem autorização prévia e por escrito do autor. Consulte o arquivo [LICENSE](LICENSE).

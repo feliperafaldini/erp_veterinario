@@ -1,21 +1,42 @@
-MIT License
+PROPRIETARY LICENSE — ALL RIGHTS RESERVED
 
-Copyright (c) 2026 Felipe Albino Rafaldini
+Copyright (c) 2026 Felipe Albino Rafaldini. All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+This repository and everything in it (source code, schemas, documentation,
+tests, configuration and any other material, together the "Software") is the
+exclusive property of Felipe Albino Rafaldini ("Owner"). The Software is made
+visible only so that it can be read for evaluation of the Owner's work.
+Visibility does not grant any license.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+Without the prior written permission of the Owner, you may NOT:
+
+  1. use, run, deploy or host the Software, in whole or in part, for any
+     purpose, commercial or not;
+  2. copy, reproduce, fork for use, modify, adapt, translate or create
+     derivative works of the Software;
+  3. distribute, publish, sublicense, sell, rent, lend or otherwise make the
+     Software available to any third party;
+  4. use the Software, its code, data model or documentation to train,
+     fine-tune or evaluate machine-learning models;
+  5. remove or alter this notice or any copyright notice.
+
+The only permission granted is to view the Software in this repository and
+to use GitHub's built-in features that GitHub's Terms of Service require
+(viewing and forking within GitHub's platform), without any right to use the
+forked material outside those features.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+IMPLIED. THE OWNER SHALL NOT BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY ARISING FROM THE SOFTWARE. Any breach of this license terminates
+all permissions immediately and entitles the Owner to all remedies available
+under applicable law.
+
+---
+
+LICENÇA PROPRIETÁRIA — TODOS OS DIREITOS RESERVADOS
+
+Este repositório é propriedade exclusiva de Felipe Albino Rafaldini. É
+proibido usar, copiar, modificar, distribuir, hospedar, sublicenciar ou
+treinar modelos de IA com qualquer parte do código ou da documentação sem
+autorização prévia e por escrito do titular. A visibilidade pública não
+concede nenhuma licença; é permitida apenas a leitura para avaliação.
